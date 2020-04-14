@@ -1,0 +1,1 @@
+protoc -I=./../src/message.proto --nanopb_out=./../src ./../src/message.proto
