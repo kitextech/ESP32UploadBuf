@@ -20,6 +20,7 @@ public:
 
   // functions
   void sendIMU(Imu imu);
+  void sendWind(Wind wind);
   static bool writeBuffer(pb_ostream_t *stream, const pb_field_iter_t *field, void *const *arg);
 
 private:

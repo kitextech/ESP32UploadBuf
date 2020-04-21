@@ -5,6 +5,9 @@
 // #include "pb.h"
 // #include "pb_encode.h"
 
+#include<iostream>
+
+
 // #include <WiFi.h>
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h> // NTC
@@ -13,6 +16,21 @@
 #include <Adafruit_BNO055.h>  // BNO-055
 #include <ProtobufBridge.h>
 
+#include <MedianFilter.h>
+
+/*
+ * AS5040.h          -> library for reading data through SSI protocol from AS5140 magnetic sensor
+ * MedianFilter.h    -> library for filtering the noisy recieved analog data
+ * ESP8266WiFi.h     -> library for handling modularity of wifi on ESP8266 
+ * WiFiUdp.h         -> library for reading time by UDP protocol from NTP server
+ */
+
+
+// enum Sensor {Imu, Wind} sensor;
+// sensor = Imu;
+
+enum direction {East, West, North, South}dir;
+dir = East;
 
 const char* ssid     = "kitex";
 const char* password = "morepower";
@@ -23,7 +41,7 @@ size_t wrapMessageLength;
 uint8_t bufferWrapper[512];
 
 WiFiClient client;
-ProtobufBridge protobufBridgeIMU;
+ProtobufBridge protobufBridge;
 
 const char* addr     = "192.168.8.126";
 const uint16_t port  = 10101;
@@ -41,6 +59,21 @@ int64_t sysTimeAtBaseTime;
 // BNO-055
 #define BNO055_SAMPLERATE_DELAY_MS (10)
 Adafruit_BNO055 bno = Adafruit_BNO055(-1, 0x28);
+
+// Wind speed (analog read)
+const int AnalogPin = A0;
+const int VoltdivRatio = 2;
+const float minVoltage = 0.4 / VoltdivRatio;
+const float maxVoltage = 2.0 / VoltdivRatio;
+const float minSpeed = 0.2;
+const float maxSpeed = 32.4;
+const int updateFreq = 5;
+MedianFilter MedFilter(10, 0);
+
+
+float mapFloat(float value, float in_min, float in_max, float out_min, float out_max) {
+  return (value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
 
 void setupIMU() { // BNO-055 SETUP
   Serial.println("Orientation Sensor Raw Data Test"); Serial.println("");
@@ -94,7 +127,7 @@ void setup() {
   baseTime = timeSync.getTime(timeServerIP, udp);
   sysTimeAtBaseTime = int64_t(millis());
 
-  setupIMU();
+  // setupIMU();
 }
 
 int64_t getNewTime() {
@@ -103,6 +136,8 @@ int64_t getNewTime() {
 
 Imu prepareIMUData() {
   Imu imuData = Imu_init_zero;
+  
+  imuData.time = getNewTime();
 
   imu::Vector<3> acc = bno.getVector(Adafruit_BNO055::VECTOR_LINEARACCEL);
   imu::Vector<3> gyro = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
@@ -124,9 +159,31 @@ Imu prepareIMUData() {
   imuData.orientation.z = quat.z();
   imuData.orientation.w = quat.w();
 
-  imuData.time = getNewTime();
-
   return imuData;
+}
+
+Wind prepareWindData() {
+  Wind windData = Wind_init_zero;
+
+  windData.time = getNewTime();
+
+  MedFilter.in(analogRead(AnalogPin));
+  int rawSensorData = MedFilter.out();
+  // map the raw sensor data to the voltage between 0.0 to 3.0
+  float sensorValue = mapFloat(float(rawSensorData), 6.0, 1024.0, 0.0, 1.0);
+  /* 
+     * convert the voltage to wind speed 
+     * calibration refrence 
+     * https://thepihut.com/products/adafruit-anemometer-wind-speed-sensor-w-analog-voltage-output
+    */
+  float measuredSpeed = mapFloat(sensorValue, minVoltage, maxVoltage, minSpeed, maxSpeed);
+  // Serial.print("wind speed : \t");
+  // Serial.println(measuredSpeed);
+
+  windData.speed = measuredSpeed;
+  windData.direction = 0.0f;
+
+  return windData;
 }
 
 void loop() {
@@ -142,10 +199,13 @@ void loop() {
     return;
   }
 
-  Imu imuData = prepareIMUData();
+  // Imu imuData = prepareIMUData();
+  // protobufBridge.sendIMU(imuData);
 
-  protobufBridgeIMU.sendIMU(imuData);
-  client.write(protobufBridgeIMU.bufferWrapper, protobufBridgeIMU.wrapMessageLength);
+  Wind windData = prepareWindData();
+  protobufBridge.sendWind(windData);
+
+  client.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
 
   digitalWrite(LED_BUILTIN, HIGH);
 
