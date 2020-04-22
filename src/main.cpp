@@ -29,8 +29,8 @@
 // enum Sensor {Imu, Wind} sensor;
 // sensor = Imu;
 
-enum direction {East, West, North, South}dir;
-dir = East;
+// enum direction {East, West, North, South}dir;
+// dir = East;
 
 const char* ssid     = "kitex";
 const char* password = "morepower";
@@ -70,6 +70,10 @@ const float maxSpeed = 32.4;
 const int updateFreq = 5;
 MedianFilter MedFilter(10, 0);
 
+// Define the LED pin - different for different ESP's
+// #define LED_PIN LED_BUILTIN // For normal Arduino, possibly other ESP's
+#define LED_PIN 0
+
 
 float mapFloat(float value, float in_min, float in_max, float out_min, float out_max) {
   return (value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
@@ -91,43 +95,6 @@ void setupIMU() { // BNO-055 SETUP
   Serial.println("");
   bno.setExtCrystalUse(true);
   Serial.println("Calibration status values: 0=uncalibrated, 3=fully calibrated");
-}
-
-void setup() {
-  Serial.begin(115200);
-  Serial.setDebugOutput(true);
-
-  delay(10);
-
-  // We start by connecting to a WiFi network
-  Serial.println();
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-
-  WiFi.begin(ssid, password);
-
-  while (WiFi.status() != WL_CONNECTED) {
-      delay(500);
-      Serial.print(".");
-  }
-
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
-
-  // NTC
-  // connect to udp 
-  Serial.println("Starting UDP");
-  udp.begin(localPort);
-  Serial.print("Local port: ");
-  // Serial.println(up);
-
-  baseTime = timeSync.getTime(timeServerIP, udp);
-  sysTimeAtBaseTime = int64_t(millis());
-
-  // setupIMU();
 }
 
 int64_t getNewTime() {
@@ -186,28 +153,77 @@ Wind prepareWindData() {
   return windData;
 }
 
+void setup() {
+  Serial.begin(115200);
+  Serial.setDebugOutput(true);
+  pinMode(LED_PIN, OUTPUT);
+
+  delay(10);
+
+  // We start by connecting to a WiFi network
+  Serial.println();
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+  }
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  // NTC
+  // connect to udp 
+  Serial.println("Starting UDP");
+  udp.begin(localPort);
+  Serial.print("Local port: ");
+  // Serial.println(up);
+
+  Serial.println("I shall now fetch the time!");
+  baseTime = timeSync.getTime(timeServerIP, udp);
+  sysTimeAtBaseTime = int64_t(millis());
+
+  // setupIMU();
+}
+
+
+// void blink(int durations[]) {
+//   for (int i = 0; i < sizeof(durations); i++) {
+//     if (i % 2) {
+//       digitalWrite(LED_PIN, LOW);
+//     } else {
+//       digitalWrite(LED_PIN, HIGH);
+//     }
+//     delay(durations[i]);
+//   }
+// }
+
 void loop() {
-  digitalWrite(LED_BUILTIN, LOW);
-  //Serial.print("connecting to ");
-  //Serial.println(addr);
+  digitalWrite(LED_PIN, LOW);
 
   if (!client.connected()) {
     client.connect(addr, port);
     Serial.println("connection failed");
     Serial.println("wait 5 sec to reconnect...");
     delay(5000);
-    return;
+  } else {
+    // Imu imuData = prepareIMUData();
+    // protobufBridge.sendIMU(imuData);
+
+    Wind windData = prepareWindData();
+    protobufBridge.sendWind(windData);
+    delay(500);
+
+    client.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+
+    digitalWrite(LED_PIN, HIGH);
+
+    delay(20);
   }
-
-  // Imu imuData = prepareIMUData();
-  // protobufBridge.sendIMU(imuData);
-
-  Wind windData = prepareWindData();
-  protobufBridge.sendWind(windData);
-
-  client.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-
-  digitalWrite(LED_BUILTIN, HIGH);
-
-  delay(20);
 }

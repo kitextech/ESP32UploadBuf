@@ -10,7 +10,7 @@ struct parsedTime {
 struct parsedTime Ptime;
 
 // send an NTP request to the time server at the given address
-unsigned long TimeSync::sendNTPpacket(IPAddress& address, WiFiUDP udp)
+void TimeSync::sendNTPpacket(IPAddress& address, WiFiUDP udp)
 {
   // Serial.println("sending NTP packet...");
   // set all bytes in the buffer to 0
@@ -60,26 +60,30 @@ int64_t TimeSync::Parse(struct parsedTime *timeStruct, byte* packet){
 
 
 int64_t TimeSync::getTime(IPAddress timeServerIP, WiFiUDP udp) {
-  WiFi.hostByName(ntpServerName, timeServerIP);
-  sendNTPpacket(timeServerIP, udp); // send an NTP packet to a time server
-  delay(500);
-  int cb = udp.parsePacket();
-  if (!cb) {
-    Serial.println("no packet yet");
+  // bool gotTheTime = false;
+  while (true) {
+    // WiFi.hostByName(ntpServerName, timeServerIP); // ntpServerName
+    // sendNTPpacket(timeServerIP, udp); // send an NTP packet to a time server
+    // delay(500);
+    // int cb = udp.parsePacket();
+    // if (!cb) {
+    //   Serial.println("no packet yet");
+    // }
+    // else {
+      udp.read(packetBuffer, NTP_PACKET_SIZE);
+      int64_t time = Parse(&Ptime, packetBuffer);
+      // print in serial port 
+      Serial.println("Got the time: ");
+      Serial.print (Ptime.hour);
+      Serial.print (":");
+      Serial.print (Ptime.minute);
+      Serial.print (":");
+      Serial.print (Ptime.second);
+      Serial.print (":");
+      Serial.println (Ptime.milisecond);
+      return time;
+    // }
   }
-  else {
-    udp.read(packetBuffer, NTP_PACKET_SIZE);
-    int64_t time = Parse(&Ptime, packetBuffer);
-    // print in serial port 
-    Serial.print (Ptime.hour);
-    Serial.print (":");
-    Serial.print (Ptime.minute);
-    Serial.print (":");
-    Serial.print (Ptime.second);
-    Serial.print (":");
-    Serial.println (Ptime.milisecond);
-    return time;
-  }
-  Serial.println ( "PROBLEM!");   
-  return 0;
+  // Serial.println ( "PROBLEM!");   
+  // return 0;
 }

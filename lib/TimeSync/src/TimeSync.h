@@ -16,11 +16,13 @@
             // WiFiUDP udp;
             
             // const int NTP_PACKET_SIZE = 48;
-            const char* ntpServerName = "dk.pool.ntp.org"; //"time.nist.gov";
+            // const char* ntpServerName = "192.168.8.126"; //"time.nist.gov";
+            const char* ntpServerName = "mis"; //"time.nist.gov";
+
             byte packetBuffer[NTP_PACKET_SIZE];
 
             int64_t getTime(IPAddress timeServerIP, WiFiUDP udp);
-            unsigned long sendNTPpacket(IPAddress& address, WiFiUDP udp);
+            void sendNTPpacket(IPAddress& address, WiFiUDP udp);
             int64_t Parse(struct parsedTime *timeStruct, byte* packet);
 
     };
