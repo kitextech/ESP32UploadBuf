@@ -204,6 +204,28 @@ void setup() {
 //   }
 // }
 
+// void blinkOnce() {
+//   int t0 = millis();
+//   int t1 = millis();
+//   int dt = 0;
+//   digitalWrite(LED_PIN, HIGH);
+//   delay(5);
+//   while (millis()-t0 < 500) {
+//     if (dt / 100) {
+//       digitalWrite(0, HIGH);
+//       t1 = millis();
+//     } else if (dt / 75) {
+//       digitalWrite(0, LOW);
+//     } else {
+//       digitalWrite(0, HIGH);
+//     }
+//     dt = millis()-t1;
+//   }
+//   digitalWrite(0, LOW);
+// }
+
+int t0 = millis();
+
 void loop() {
   digitalWrite(LED_PIN, LOW);
 
@@ -211,18 +233,40 @@ void loop() {
     client.connect(addr, port);
     Serial.println("connection failed");
     Serial.println("wait 5 sec to reconnect...");
-    delay(5000);
+    delay(5000); // Add error blinking here
   } else {
     // Imu imuData = prepareIMUData();
     // protobufBridge.sendIMU(imuData);
 
-    Wind windData = prepareWindData();
-    protobufBridge.sendWind(windData);
-    delay(500);
+    int uploadFrequency = 2; // Hz
 
-    client.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+    if (int(millis())-(1000/uploadFrequency) >= t0) {
+      t0 = millis();
+      Wind windData = prepareWindData();
+      protobufBridge.sendWind(windData);
+      client.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+      digitalWrite(LED_PIN, HIGH);
+    } else if (int(millis())-(1000/(uploadFrequency*2)) >= t0) {
+      digitalWrite(LED_PIN, LOW);
+    }
 
-    digitalWrite(LED_PIN, HIGH);
+
+    // int t0 = millis();
+    // int t1 = millis();
+    // int dt = 0;
+    // while (millis()-t0 < 500) {
+    //   if (dt / 100) {
+    //     digitalWrite(0, HIGH);
+    //     t1 = millis();
+    //   } else if (dt / 50) {
+    //     digitalWrite(0, LOW);
+    //   } else {
+    //     digitalWrite(0, HIGH);
+    //   }
+    //   dt = millis()-t1;
+    // }
+
+    // digitalWrite(LED_PIN, HIGH);
 
     delay(20);
   }
