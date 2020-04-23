@@ -17,6 +17,7 @@
             
             // const int NTP_PACKET_SIZE = 48;
             const char* ntpServerName = "192.168.8.126"; //"time.nist.gov";
+            // const char* ntpServerName = "dk.pool.ntp.org"; //"time.nist.gov";
             // const char* ntpServerName = "mis"; //"time.nist.gov";
 
             byte packetBuffer[NTP_PACKET_SIZE];
