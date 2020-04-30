@@ -43,7 +43,7 @@ uint8_t bufferWrapper[512];
 WiFiClient client;
 ProtobufBridge protobufBridge;
 
-const char* addr     = "192.168.8.126";
+const char* addr     = "192.168.8.144"; // Local IP of the black-pearl pi
 const uint16_t port  = 10101;
 
 // NTC
