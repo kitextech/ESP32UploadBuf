@@ -12,7 +12,9 @@ struct parsedTime Ptime;
 // send an NTP request to the time server at the given address
 void TimeSync::sendNTPpacket(IPAddress& address, WiFiUDP udp)
 {
-  // Serial.println("sending NTP packet...");
+  Serial.println("sending NTP packet...");
+  Serial.println(address.toString());
+
   // set all bytes in the buffer to 0
   memset(packetBuffer, 0, NTP_PACKET_SIZE);
   // Initialize values needed to form NTP request

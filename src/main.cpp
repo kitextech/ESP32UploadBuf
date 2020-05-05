@@ -1,3 +1,14 @@
+
+/*
+RPM part is based on Arduino Hall Effect Sensor Project by Arvind Sanjeev
+Link: http://diyhacking.com
+Temperature part is based on Adafruit Learning System guide on Thermistors by Limor Fried, Adafruit Industries
+Link:  https://learn.adafruit.com/thermistor/overview
+
+Both modified by Bertalan Kovács (bertalan@kitex.tech)
+Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/README.md
+*/
+
 #include <Arduino.h>
 // #include "msg.pb.h"
 // #include "schema.pb.h"
@@ -43,7 +54,9 @@ uint8_t bufferWrapper[512];
 WiFiClient client;
 ProtobufBridge protobufBridge;
 
-const char* addr     = "192.168.8.144"; // Local IP of the black-pearl pi
+//const char* addr     = "192.168.8.144"; // Local IP of the black-pearl pi
+const char* addr     = "192.168.8.126"; // Local IP of the okholms Laptop
+
 const uint16_t port  = 10101;
 
 // NTC
@@ -56,8 +69,11 @@ TimeSync timeSync;
 int64_t baseTime;
 int64_t sysTimeAtBaseTime;
 
-int uploadFrequency = 2; // Hz
-int t0 = millis();
+int uploadFrequencyIMU = 50;
+int uploadFrequencyWind = 2;
+int uploadFrequencyMotor = 1;
+int t0_IMU = millis();
+int t0_Motor = millis();
 
 // BNO-055
 #define BNO055_SAMPLERATE_DELAY_MS (10)
@@ -73,10 +89,32 @@ const float maxSpeed = 32.4;
 const int updateFreq = 5;
 MedianFilter MedFilter(10, 0);
 
+//// Motor measurements (RPM + temperature)
+// Hall sensor settings
+#define HALL 14             // D5 pin on ESP8266 NodeMCU for one hall sensor connection
+#define POLE_PAIR_NUM 7     // 14 poles -> 7 pole pairs, counted manually
+
+// Teperature settings
+#define THERMISTORPIN A0    // which analog pin to connect
+#define THERMISTORNOMINAL 10000 // resistance at 25 degrees C
+#define TEMPERATURENOMINAL 25 // temp. for nominal resistance (almost always 25 C)
+#define NUMSAMPLES 5        // how many samples to take and average, more takes longer but is more 'smooth'
+#define BCOEFFICIENT 3950   // The beta coefficient of the thermistor (usually 3000-4000)
+#define SERIESRESISTOR 10000  // the value of the 'other' resistor
+
+unsigned int detection = 0;     // Detection counter by the hall sensor
+float rpm = 0;
+
+int adc_samples[NUMSAMPLES];
+
 // Define the LED pin - different for different ESP's
 // #define LED_PIN LED_BUILTIN // For normal Arduino, possibly other ESP's
 #define LED_PIN 0
 
+ICACHE_RAM_ATTR void magnet_detect()  // This function is called whenever a magnet/interrupt is detected
+{
+   detection++;
+}
 
 float mapFloat(float value, float in_min, float in_max, float out_min, float out_max) {
   return (value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
@@ -102,6 +140,12 @@ void setupIMU() { // BNO-055 SETUP
 
 int64_t getNewTime() {
   return baseTime - sysTimeAtBaseTime + int64_t(millis());
+}
+
+void setupMotor()
+{
+   pinMode(HALL, INPUT_PULLUP);       // Pulling up the pin (equivalent of using the 10kOhm resistance on the board)
+   attachInterrupt(digitalPinToInterrupt(HALL), magnet_detect, RISING); // Initialize the intterrupt pin
 }
 
 Imu prepareIMUData() {
@@ -156,6 +200,64 @@ Wind prepareWindData() {
   return windData;
 }
 
+Speed prepareRPMData() {
+  Speed rpmData = Speed_init_zero;
+
+  rpmData.time = getNewTime();
+  // 60 is to convert rps to rpm; 1000 to corrigate ms to s; 
+  // division by pole pairs is to get the whole rotation not only between two plus polarity magnet ¨
+  rpm = float(60*1000) /( float(millis() - t0_Motor)) * float(detection) / float(POLE_PAIR_NUM);
+  detection = 0;
+  // Serial.print("RPM: "); 
+  // Serial.println(rpm);
+
+
+  rpmData.RPM = rpm;
+
+  return rpmData;
+}
+
+Temperature prepareTemperatureData() {
+  Temperature temperatureData = Temperature_init_zero;
+
+  temperatureData.time = getNewTime();
+
+  uint8_t i;
+  float average;
+  
+  // take N samples in a row, with a slight delay
+  for (i=0; i< NUMSAMPLES; i++) {
+    adc_samples[i] = analogRead(THERMISTORPIN);
+  }
+  
+  // average all the samples out
+  average = 0;
+  for (i=0; i< NUMSAMPLES; i++) {
+      average += adc_samples[i];
+  }
+  average /= NUMSAMPLES;
+  
+  // convert the value to resistance
+  average = 1023 / average - 1;
+  average = SERIESRESISTOR / average;
+    
+  float steinhart;
+  steinhart = average / THERMISTORNOMINAL;     // (R/Ro)
+  steinhart = log(steinhart);                  // ln(R/Ro)
+  steinhart /= BCOEFFICIENT;                   // 1/B * ln(R/Ro)
+  steinhart += 1.0 / (TEMPERATURENOMINAL + 273.15); // + (1/To)
+  steinhart = 1.0 / steinhart;                 // Invert
+  steinhart -= 273.15;                         // convert to C
+  
+  // Serial.print("Temperature: "); 
+  // Serial.print(steinhart);
+  // Serial.println(" °C");
+
+  temperatureData.temperature = steinhart;
+
+  return temperatureData;
+}
+
 void setup() {
   Serial.begin(115200);
   Serial.setDebugOutput(true);
@@ -186,13 +288,16 @@ void setup() {
   Serial.println("Starting UDP");
   udp.begin(localPort);
   Serial.print("Local port: ");
-  // Serial.println(up);
+  //Serial.println(up);
 
   Serial.println("I shall now fetch the time!");
+  timeServerIP = IPAddress();
+  timeServerIP.fromString(addr);
   baseTime = timeSync.getTime(timeServerIP, udp);
   sysTimeAtBaseTime = int64_t(millis());
 
   // setupIMU();
+  setupMotor();
 }
 
 
@@ -205,21 +310,34 @@ void loop() {
     Serial.println("connection failed");
     Serial.println("wait 5 sec to reconnect...");
     delay(5000); // Add error blinking here
-  } else {
+  } 
+  else {
     // If connected, upload and blink at specified frequency
-    if (int(millis())-t0 >= (1000/uploadFrequency)) {
-      t0 = millis();
+    if (int(millis())-t0_IMU >= (1000/uploadFrequencyIMU)) {
+      t0_IMU = millis();
       Wind windData = prepareWindData();
       protobufBridge.sendWind(windData);
-      // Imu imuData = prepareIMUData();
-      // protobufBridge.sendIMU(imuData);
+      Imu imuData = prepareIMUData();
+      protobufBridge.sendIMU(imuData);
       client.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-    } else if (int(millis())-t0 >= (1000/(uploadFrequency*2))) {
+    } 
+    else if (int(millis())-t0_IMU >= (1000/(uploadFrequencyIMU*2))) {
       digitalWrite(LED_PIN, LOW);
       // Serial.println("LOW");
     } else {
       digitalWrite(LED_PIN, HIGH);
       // Serial.println("HIGH");
+    }
+
+    if (int(millis())-t0_Motor >= (1000/(uploadFrequencyMotor))) {
+      Speed rpmData = prepareRPMData();
+      protobufBridge.sendSpeed(rpmData);
+      client.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+
+      Temperature temperatureData = prepareTemperatureData();
+      protobufBridge.sendTemperature(temperatureData);
+      client.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+      t0_Motor = millis();
     }
   }
 }

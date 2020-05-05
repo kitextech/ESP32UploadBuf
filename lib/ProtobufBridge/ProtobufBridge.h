@@ -21,6 +21,8 @@ public:
   // functions
   void sendIMU(Imu imu);
   void sendWind(Wind wind);
+  void sendSpeed(Speed speed);
+  void sendTemperature(Temperature temperature);
   static bool writeBuffer(pb_ostream_t *stream, const pb_field_iter_t *field, void *const *arg);
 
 private:
