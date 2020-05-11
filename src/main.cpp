@@ -46,7 +46,8 @@ uint8_t bufferWrapper[512];
 WiFiClient client;
 ProtobufBridge protobufBridge;
 
-const char *addr = "192.168.8.126"; // Local IP of the black-pearl pi
+const char *addr = "192.168.8.106"; // Local IP of the black-pearl pi
+
 const uint16_t port = 10101;
 
 // NTC
@@ -68,6 +69,12 @@ Adafruit_BNO055 bno = Adafruit_BNO055(-1, 0x28);
 
 // AS5140-H
 AS5040 encoder(CLKpin, CSpin, DOpin, PROGpin);
+
+struct windVane
+{
+  float Direction;
+  bool Status;
+} vaneData;
 
 // Wind speed (analog read)
 const int AnalogPin = A0;
@@ -125,7 +132,23 @@ void setupAS5140()
 float getAS5140_data()
 {
   int rawData = encoder.read();
-  return mapFloat(rawData, 0, 1024, 0, 360);
+  vaneData.Status = encoder.valid();
+
+  if (vaneData.Status == true)
+  {
+    vaneData.Direction = mapFloat(rawData, 0, 1024, 0, 360);
+  }
+  else
+  {
+    vaneData.Direction = (float)2000;
+  }
+  /*
+    Serial.print("encoder status char: ");
+    Serial.println(encoder.valid() ? "OK" : "Fault");
+    Serial.print("encoder status bool: ");
+    Serial.println(vaneData.Status);
+  */
+  return vaneData.Direction;
 }
 
 int64_t getNewTime()
@@ -183,7 +206,7 @@ Wind prepareWindData()
 
   windData.speed = measuredSpeed;
   windData.direction = getAS5140_data();
-  Serial.print(windData.direction);
+
   return windData;
 }
 
