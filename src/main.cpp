@@ -19,8 +19,8 @@
 // WiFi and server
 const char *ssid = "kitexField";
 const char *password = "morepower";
-// const char *addr = "192.168.8.126"; // Local IP of the black-pearl pi
-const char *addr = "192.168.8.104"; // Local IP of office laptop
+const char *addr = "192.168.8.144"; // Local IP of the black-pearl pi
+// const char *addr = "192.168.8.104"; // Local IP of office laptop
 
 // Time
 IPAddress timeServerIP;
@@ -221,10 +221,10 @@ void loop()
   digitalWrite(LED_PIN, LOW);
 
   // Wait if not connected to wifi
-  if (!WL_CONNECTED)
+  if (WiFi.status() != WL_CONNECTED)
   {
     Serial.println("Connection failed, wait 5 sec...");
-    delay(5000); // Add error blinking here
+    delay(5000);
   }
   else
   {
