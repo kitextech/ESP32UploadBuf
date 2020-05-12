@@ -14,8 +14,8 @@ public:
     // WiFiUDP udp;
 
     // const int NTP_PACKET_SIZE = 48;
-    const char *ntpServerName = "192.168.8.126"; // Local IP of the black-pearl pi
-    // const char* ntpServerName = "dk.pool.ntp.org";
+    // const char *ntpServerName = "192.168.8.104"; // Local IP of the black-pearl pi
+    const char* ntpServerName = "dk.pool.ntp.org";
     // const char* ntpServerName = "time.nist.gov";
 
     byte packetBuffer[NTP_PACKET_SIZE];
