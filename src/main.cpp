@@ -1,13 +1,5 @@
 #include <Arduino.h>
-// #include "msg.pb.h"
-// #include "schema.pb.h"
-// #include "pb_common.h"
-// #include "pb.h"
-// #include "pb_encode.h"
-
 #include <iostream>
-
-// #include <WiFi.h>
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h> // NTC
 #include <TimeSync.h>
@@ -24,38 +16,30 @@
  * WiFiUdp.h         -> library for reading time by UDP protocol from NTP server
  */
 
+// WiFi and server
 const char *ssid = "kitexField";
 const char *password = "morepower";
-
-// uint8_t buffer[128];
-// size_t imuMessageLength;
-// size_t wrapMessageLength;
-// uint8_t bufferWrapper[512];
-
-// WiFiClient client;
-ProtobufBridge protobufBridge;
-
 // const char *addr = "192.168.8.126"; // Local IP of the black-pearl pi
 const char *addr = "192.168.8.104"; // Local IP of office laptop
 
-unsigned int insertPort = 10102;
-
-const uint16_t port = 10101;
-
-WiFiUDP udp_insert;
-
-// NTC
+// Time
 IPAddress timeServerIP;
 WiFiUDP udp_time;
-unsigned int localPort = 2390;
+unsigned int udpPortLocalTime = 2390;
 
-// Time
 TimeSync timeSync;
 int64_t baseTime;
 int64_t sysTimeAtBaseTime;
 
+// Upload
 int uploadFrequency = 2; // Hz
 int t0 = millis();
+
+IPAddress insertServerIP;
+WiFiUDP udp_insert;
+unsigned int udpPortRemoteInsert = 10102;
+
+ProtobufBridge protobufBridge;
 
 // BNO-055
 #define BNO055_SAMPLERATE_DELAY_MS (10)
@@ -208,20 +192,20 @@ void setup()
     Serial.print(".");
   }
 
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
+  Serial.printf("\nWiFi connected. IP address: ");
   Serial.println(WiFi.localIP());
+
+  WiFi.hostByName(addr, insertServerIP); // Define IPAddress object with the ip address string
 
   // AS5140H
   setupAS5140();
 
-  udp_insert.begin(insertPort);
+  udp_insert.begin(udpPortRemoteInsert);
 
   // NTC
   // connect to udp_time
   Serial.println("Starting UDP");
-  udp_time.begin(localPort);
+  udp_time.begin(udpPortLocalTime);
   Serial.print("Local port: ");
   // Serial.println(up);
 
@@ -236,21 +220,10 @@ void loop()
 {
   digitalWrite(LED_PIN, LOW);
 
-  // if (WL_CONNECTED)
-  // {
-  //   Serial.println("We are connected!");
-  //   delay(500);
-  // }
-
   // Wait if not connected to wifi
   if (!WL_CONNECTED)
-
-  // Wait if not connected to wifi
-  // if (!client.connected())
   {
-    // client.connect(addr, port);
-    Serial.println("connection failed");
-    Serial.println("wait 5 sec to reconnect...");
+    Serial.println("Connection failed, wait 5 sec...");
     delay(5000); // Add error blinking here
   }
   else
@@ -263,13 +236,8 @@ void loop()
       protobufBridge.sendWind(windData);
       // Imu imuData = prepareIMUData();
       // protobufBridge.sendIMU(imuData);
-      // client.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-      udp_insert.beginPacket(addr, udp_insert.remotePort());
-      // udp_insert.write(protobufBridge.bufferWrapper);
-      // for (unsigned int i = 0; i <= protobufBridge.wrapMessageLength; i++)
-      // {
-        udp_insert.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-      // }
+      udp_insert.beginPacket(insertServerIP, udpPortRemoteInsert);
+      udp_insert.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
       udp_insert.endPacket();
     }
     else if (int(millis()) - t0 >= (1000 / (uploadFrequency * 2)))
@@ -281,45 +249,4 @@ void loop()
       digitalWrite(LED_PIN, HIGH);
     }
   }
-
-  // // Wait if not connected to wifi
-  // if (!client.connected())
-  // {
-  //   client.connect(addr, port);
-  //   Serial.println("connection failed");
-  //   Serial.println("wait 5 sec to reconnect...");
-  //   delay(5000); // Add error blinking here
-  // }
-  // else
-  // {
-  //   // If connected, upload and blink at specified frequency
-  //   if (int(millis()) - t0 >= (1000 / uploadFrequency))
-    // {
-  //     t0 = millis();
-  //     Wind windData = prepareWindData();
-  //     protobufBridge.sendWind(windData);
-  //     // Imu imuData = prepareIMUData();
-  //     // protobufBridge.sendIMU(imuData);
-      // client.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-  //   }
-  //   else if (int(millis()) - t0 >= (1000 / (uploadFrequency * 2)))
-  //   {
-  //     digitalWrite(LED_PIN, LOW);
-  //     // Serial.println("LOW");
-  //   }
-  //   else
-  //   {
-  //     digitalWrite(LED_PIN, HIGH);
-  //     // Serial.println("HIGH");
-  //   }
-  // }
 }
-
-// void foo(IPAddress remote_addr, )
-// {
-//     if (WiFi.hostByName(host, remote_addr))
-//     {
-//         return beginPacket(remote_addr, port);
-//     }
-//     return 0;
-// }
