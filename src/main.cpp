@@ -137,16 +137,24 @@ float getAS5140_data()
   if (vaneData.Status == true)
   {
     vaneData.Direction = mapFloat(rawData, 0, 1024, 0, 360);
+    // Serial.print("status BIN msg : \t");
+    // Serial.println(encoder.status(), BIN);
   }
   else
   {
     vaneData.Direction = (float)2000;
   }
   /*
-    Serial.print("encoder status char: ");
-    Serial.println(encoder.valid() ? "OK" : "Fault");
-    Serial.print("encoder status bool: ");
-    Serial.println(vaneData.Status);
+  Serial.print("status BIN msg : \t");
+  Serial.println(encoder.status(), BIN);
+  Serial.print("\n");
+  Serial.print("encoder status char: ");
+  Serial.println(encoder.valid() ? "OK" : "Fault");
+  Serial.print("\n");
+  Serial.print("encoder status char: ");
+  Serial.println(encoder.valid() ? "OK" : "Fault");
+  Serial.print("encoder status bool: ");
+  Serial.println(vaneData.Status);
   */
   return vaneData.Direction;
 }
