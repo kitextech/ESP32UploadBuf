@@ -1,32 +1,30 @@
 #ifndef TimeSync_h
-    #define TimeSync_h
-    #include <ESP8266WiFi.h>
-    #include "Arduino.h"
+#define TimeSync_h
+#include <ESP8266WiFi.h>
+#include "Arduino.h"
 
-    #include <WiFiUdp.h> // NTC
+#include <WiFiUdp.h> // NTC
 
-    
-    const int NTP_PACKET_SIZE = 48;
+const int NTP_PACKET_SIZE = 48;
 
-    class TimeSync
-    {
-        public:
-            // Time();
-            // WiFiUDP udp;
-            
-            // const int NTP_PACKET_SIZE = 48;
-            //const char* ntpServerName = "192.168.8.144"; // Local IP of the black-pearl pi
-            const char* ntpServerName = "192.168.8.126"; // Local IP of the black-pearl pi
+class TimeSync
+{
+public:
+    // Time();
+    // WiFiUDP udp;
 
-            // const char* ntpServerName = "dk.pool.ntp.org";
-            // const char* ntpServerName = "time.nist.gov";
+    // const int NTP_PACKET_SIZE = 48;
+    //const char* ntpServerName = "192.168.8.144"; // Local IP of the black-pearl pi
+    const char *ntpServerName = "192.168.8.106"; // Local IP of the black-pearl pi
 
-            byte packetBuffer[NTP_PACKET_SIZE];
+    // const char* ntpServerName = "dk.pool.ntp.org";
+    // const char* ntpServerName = "time.nist.gov";
 
-            int64_t getTime(IPAddress timeServerIP, WiFiUDP udp);
-            void sendNTPpacket(IPAddress& address, WiFiUDP udp);
-            int64_t Parse(struct parsedTime *timeStruct, byte* packet);
+    byte packetBuffer[NTP_PACKET_SIZE];
 
-    };
+    int64_t getTime(IPAddress timeServerIP, WiFiUDP udp);
+    void sendNTPpacket(IPAddress &address, WiFiUDP udp);
+    int64_t Parse(struct parsedTime *timeStruct, byte *packet);
+};
 
 #endif
