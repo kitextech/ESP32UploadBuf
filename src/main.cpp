@@ -10,23 +10,15 @@ Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/R
 */
 
 #include <Arduino.h>
-// #include "msg.pb.h"
-// #include "schema.pb.h"
-// #include "pb_common.h"
-// #include "pb.h"
-// #include "pb_encode.h"
-
 #include <iostream>
-
-// #include <WiFi.h>
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h> // NTC
 #include <TimeSync.h>
 #include <Adafruit_Sensor.h> // BNO-055
 #include <Adafruit_BNO055.h> // BNO-055
 #include <ProtobufBridge.h>
-
 #include <MedianFilter.h>
+#include <AS5040.h> // wind vane
 
 /*
  * AS5040.h          -> library for reading data through SSI protocol from AS5140 magnetic sensor
@@ -35,47 +27,45 @@ Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/R
  * WiFiUdp.h         -> library for reading time by UDP protocol from NTP server
  */
 
-// enum Sensor {Imu, Wind} sensor;
-// sensor = Imu;
-
-// enum direction {East, West, North, South}dir;
-// dir = East;
-
+// WiFi and server
 const char *ssid = "kitexField";
 const char *password = "morepower";
-
-uint8_t buffer[128];
-size_t imuMessageLength;
-size_t wrapMessageLength;
-uint8_t bufferWrapper[512];
-
-WiFiClient client;
-ProtobufBridge protobufBridge;
-
-//const char* addr     = "192.168.8.144"; // Local IP of the black-pearl pi
-const char *addr = "192.168.8.106"; // Local IP of the okholms Laptop
-
-const uint16_t port = 10101;
-
-// NTC
-IPAddress timeServerIP;
-WiFiUDP udp;
-unsigned int localPort = 2390;
+const char *addr = "192.168.8.144"; // Local IP of the black-pearl pi
+// const char *addr = "192.168.8.104"; // Local IP of office laptop
 
 // Time
+IPAddress timeServerIP;
+WiFiUDP udp_time;
+unsigned int udpPortLocalTime = 2390;
+
 TimeSync timeSync;
 int64_t baseTime;
 int64_t sysTimeAtBaseTime;
+const int secondsUntilNewTime = 300;
 
+// Upload
 int uploadFrequencyIMU = 50;
 int uploadFrequencyWind = 2;
 int uploadFrequencyMotor = 1;
 int t0_IMU = millis();
 int t0_Motor = millis();
 
+IPAddress insertServerIP;
+WiFiUDP udp_insert;
+unsigned int udpPortRemoteInsert = 10102;
+
+ProtobufBridge protobufBridge;
+
 // BNO-055
 #define BNO055_SAMPLERATE_DELAY_MS (10)
 Adafruit_BNO055 bno = Adafruit_BNO055(-1, 0x28);
+
+// Wind direction (AS5140-H)
+const int CSpin = 15;
+const int CLKpin = 14;
+const int DOpin = 12;
+const int PROGpin = 13;
+AS5040 encoder(CLKpin, CSpin, DOpin, PROGpin);
 
 // Wind speed (analog read)
 const int AnalogPin = A0;
@@ -85,7 +75,7 @@ const float maxVoltage = 2.0 / VoltdivRatio;
 const float minSpeed = 0.2;
 const float maxSpeed = 32.4;
 const int updateFreq = 5;
-MedianFilter MedFilter(10, 0);
+MedianFilter MedFilter(1, 0);
 
 //// Motor measurements (RPM + temperature)
 // Hall sensor settings
@@ -141,7 +131,25 @@ void setupIMU()
   Serial.println("Calibration status values: 0=uncalibrated, 3=fully calibrated");
 }
 
-int64_t getNewTime()
+void setupAS5140()
+{
+  // connect to the AS5140 sensor
+  if (!encoder.begin())
+  {
+    Serial.println("Error setting up AS5140");
+  }
+  else
+  {
+    Serial.println("Successfully setting up AS5140");
+  }
+}
+float getAS5140_data()
+{
+  int rawData = encoder.read();
+  return mapFloat(rawData, 0, 1024, 0, 360);
+}
+
+int64_t newLocalTime()
 {
   return baseTime - sysTimeAtBaseTime + int64_t(millis());
 }
@@ -156,7 +164,7 @@ Imu prepareIMUData()
 {
   Imu imuData = Imu_init_zero;
 
-  imuData.time = getNewTime();
+  imuData.time = newLocalTime();
 
   imu::Vector<3> acc = bno.getVector(Adafruit_BNO055::VECTOR_LINEARACCEL);
   imu::Vector<3> gyro = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
@@ -185,7 +193,7 @@ Wind prepareWindData()
 {
   Wind windData = Wind_init_zero;
 
-  windData.time = getNewTime();
+  windData.time = newLocalTime();
 
   MedFilter.in(analogRead(AnalogPin));
   int rawSensorData = MedFilter.out();
@@ -201,8 +209,8 @@ Wind prepareWindData()
   // Serial.println(measuredSpeed);
 
   windData.speed = measuredSpeed;
-  windData.direction = 0.0f;
-
+  windData.direction = getAS5140_data();
+  Serial.print(windData.direction);
   return windData;
 }
 
@@ -267,6 +275,13 @@ Temperature prepareTemperatureData()
   return temperatureData;
 }
 
+void getTime()
+{
+  Serial.println("I shall now fetch the time!");
+  baseTime = timeSync.getTime(timeServerIP, udp);
+  sysTimeAtBaseTime = int64_t(millis());
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -289,61 +304,66 @@ void setup()
     Serial.print(".");
   }
 
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
+  Serial.printf("\nWiFi connected. IP address: ");
   Serial.println(WiFi.localIP());
 
+  WiFi.hostByName(addr, insertServerIP); // Define IPAddress object with the ip address string
+
+  // AS5140H
+  setupAS5140();
+
+  udp_insert.begin(udpPortRemoteInsert);
+
   // NTC
-  // connect to udp
+  // connect to udp_time
   Serial.println("Starting UDP");
-  udp.begin(localPort);
+  udp_time.begin(udpPortLocalTime);
   Serial.print("Local port: ");
   //Serial.println(up);
 
-  Serial.println("I shall now fetch the time!");
-  timeServerIP = IPAddress();
-  timeServerIP.fromString(addr);
-  baseTime = timeSync.getTime(timeServerIP, udp);
-  sysTimeAtBaseTime = int64_t(millis());
+  getTime();
 
+  setupAS5140();
   // setupIMU();
   setupMotor();
 }
 
 void loop()
 {
+  if (millis()-sysTimeAtBaseTime >= (secondsUntilNewTime*1000))
+  {
+    getTime();
+  }
+
   digitalWrite(LED_PIN, LOW);
 
   // Wait if not connected to wifi
-  if (!client.connected())
+  if (WiFi.status() != WL_CONNECTED)
   {
-    client.connect(addr, port);
-    Serial.println("connection failed");
-    Serial.println("wait 5 sec to reconnect...");
-    delay(5000); // Add error blinking here
+    Serial.println("Connection failed, wait 5 sec...");
+    delay(5000);
   }
   else
-  {
+  { 
     // If connected, upload and blink at specified frequency
     if (int(millis()) - t0_IMU >= (1000 / uploadFrequencyIMU))
     {
-      t0_IMU = millis();
+      t0 = millis();
       Wind windData = prepareWindData();
       protobufBridge.sendWind(windData);
-      Imu imuData = prepareIMUData();
-      protobufBridge.sendIMU(imuData);
-      client.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+      // Imu imuData = prepareIMUData();
+      // protobufBridge.sendIMU(imuData);
+      udp_insert.beginPacket(insertServerIP, udpPortRemoteInsert);
+      udp_insert.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+      udp_insert.endPacket();
     }
     else if (int(millis()) - t0_IMU >= (1000 / (uploadFrequencyIMU * 2)))
     {
       digitalWrite(LED_PIN, LOW);
-      // Serial.println("LOW");
     }
     else
     {
       digitalWrite(LED_PIN, HIGH);
-      // Serial.println("HIGH");
     }
 
     if (int(millis()) - t0_Motor >= (1000 / (uploadFrequencyMotor)))
