@@ -30,6 +30,7 @@ unsigned int udpPortLocalTime = 2390;
 TimeSync timeSync;
 int64_t baseTime;
 int64_t sysTimeAtBaseTime;
+const int secondsUntilNewTime = 300;
 
 // Upload
 int uploadFrequency = 2; // Hz
@@ -111,7 +112,7 @@ float getAS5140_data()
   return mapFloat(rawData, 0, 1024, 0, 360);
 }
 
-int64_t getNewTime()
+int64_t newLocalTime()
 {
   return baseTime - sysTimeAtBaseTime + int64_t(millis());
 }
@@ -120,7 +121,7 @@ Imu prepareIMUData()
 {
   Imu imuData = Imu_init_zero;
 
-  imuData.time = getNewTime();
+  imuData.time = newLocalTime();
 
   imu::Vector<3> acc = bno.getVector(Adafruit_BNO055::VECTOR_LINEARACCEL);
   imu::Vector<3> gyro = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
@@ -149,7 +150,7 @@ Wind prepareWindData()
 {
   Wind windData = Wind_init_zero;
 
-  windData.time = getNewTime();
+  windData.time = newLocalTime();
 
   MedFilter.in(analogRead(AnalogPin));
   int rawSensorData = MedFilter.out();
@@ -168,6 +169,13 @@ Wind prepareWindData()
   windData.direction = getAS5140_data();
   Serial.print(windData.direction);
   return windData;
+}
+
+void getTime()
+{
+  Serial.println("I shall now fetch the time!");
+  baseTime = timeSync.getTime(timeServerIP, udp);
+  sysTimeAtBaseTime = int64_t(millis());
 }
 
 void setup()
@@ -209,15 +217,19 @@ void setup()
   Serial.print("Local port: ");
   // Serial.println(up);
 
-  Serial.println("I shall now fetch the time!");
-  baseTime = timeSync.getTime(timeServerIP, udp_time);
-  sysTimeAtBaseTime = int64_t(millis());
+  getTime();
 
+  setupAS5140();
   // setupIMU();
 }
 
 void loop()
 {
+  if (millis()-sysTimeAtBaseTime >= (secondsUntilNewTime*1000))
+  {
+    getTime();
+  }
+
   digitalWrite(LED_PIN, LOW);
 
   // Wait if not connected to wifi
@@ -227,7 +239,7 @@ void loop()
     delay(5000);
   }
   else
-  {
+  { 
     // If connected, upload and blink at specified frequency
     if (int(millis()) - t0 >= (1000 / uploadFrequency))
     {
