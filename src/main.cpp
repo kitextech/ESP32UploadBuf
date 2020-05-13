@@ -46,9 +46,12 @@ const int secondsUntilNewTime = 300;
 // Upload
 int uploadFrequencyIMU = 50;
 int uploadFrequencyWind = 2;
-int uploadFrequencyMotor = 1;
+int uploadFrequencyRPM = 1;
+int uploadFrequencyTemp = 1;
 int t0_IMU = millis();
 int t0_Motor = millis();
+int t0_RPM = millis();
+int t0_temp = millis();
 
 IPAddress insertServerIP;
 WiFiUDP udp_insert;
@@ -103,6 +106,16 @@ ICACHE_RAM_ATTR void magnet_detect() // This function is called whenever a magne
 {
   detection++;
 }
+
+enum SendDataType
+{
+  sendRPM,
+  sendForce,
+  sendPower,
+  sendImu,
+  sendTemperature,
+  sendWind
+};
 
 float mapFloat(float value, float in_min, float in_max, float out_min, float out_max)
 {
@@ -218,7 +231,7 @@ Speed prepareRPMData()
 {
   Speed rpmData = Speed_init_zero;
 
-  rpmData.time = getNewTime();
+  rpmData.time = newLocalTime();
   // 60 is to convert rps to rpm; 1000 to corrigate ms to s;
   // division by pole pairs is to get the whole rotation not only between two plus polarity magnet ¨
   rpm = float(60 * 1000) / (float(millis() - t0_Motor)) * float(detection) / float(POLE_PAIR_NUM);
@@ -235,7 +248,7 @@ Temperature prepareTemperatureData()
 {
   Temperature temperatureData = Temperature_init_zero;
 
-  temperatureData.time = getNewTime();
+  temperatureData.time = newLocalTime();
 
   uint8_t i;
   float average;
@@ -278,8 +291,61 @@ Temperature prepareTemperatureData()
 void getTime()
 {
   Serial.println("I shall now fetch the time!");
-  baseTime = timeSync.getTime(timeServerIP, udp);
+  baseTime = timeSync.getTime(timeServerIP, udp_time);
   sysTimeAtBaseTime = int64_t(millis());
+}
+
+void udpSendPB()
+{
+  udp_insert.beginPacket(insertServerIP, udpPortRemoteInsert);
+  udp_insert.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+  udp_insert.endPacket();
+}
+
+void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency)
+{
+  if (int(millis()) - t0 >= (1000 / uploadFrequency))
+  {
+    t0 = millis();
+    switch(sendDataType)
+    {
+      case sendRPM:
+      {
+        Speed rpmData = prepareRPMData();
+        protobufBridge.sendSpeed(rpmData);
+        break;
+      }
+      case sendImu:
+      {
+        Imu imuData = prepareIMUData();
+        protobufBridge.sendIMU(imuData);
+        break;
+      }
+      case sendTemperature:
+      {
+        Temperature temperatureData = prepareTemperatureData();
+        protobufBridge.sendTemperature(temperatureData);
+        break;
+      }
+      case sendWind:
+      {
+        Wind windData = prepareWindData();
+        protobufBridge.sendWind(windData);
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  else if (int(millis()) - t0 >= (1000 / (uploadFrequency * 2)))
+  {
+    digitalWrite(LED_PIN, LOW);
+  }
+  else
+  {
+    digitalWrite(LED_PIN, HIGH);
+  }
+  udpSendPB();
 }
 
 void setup()
@@ -346,37 +412,37 @@ void loop()
   else
   { 
     // If connected, upload and blink at specified frequency
-    if (int(millis()) - t0_IMU >= (1000 / uploadFrequencyIMU))
-    {
-      t0 = millis();
-      Wind windData = prepareWindData();
-      protobufBridge.sendWind(windData);
-      // Imu imuData = prepareIMUData();
-      // protobufBridge.sendIMU(imuData);
-      udp_insert.beginPacket(insertServerIP, udpPortRemoteInsert);
-      udp_insert.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-      udp_insert.endPacket();
-    }
-    else if (int(millis()) - t0_IMU >= (1000 / (uploadFrequencyIMU * 2)))
-    {
-      digitalWrite(LED_PIN, LOW);
-    }
-    else
-    {
-      digitalWrite(LED_PIN, HIGH);
-    }
+    sendDataAtFrequency(sendImu, t0_IMU, uploadFrequencyIMU);
+    sendDataAtFrequency(sendRPM, t0_RPM, uploadFrequencyRPM);
+    sendDataAtFrequency(sendTemperature, t0_temp, uploadFrequencyTemp);
+    // if (int(millis()) - t0_IMU >= (1000 / uploadFrequencyIMU))
+    // {
+    //   t0_IMU = millis();
+    //   // Wind windData = prepareWindData();
+    //   // protobufBridge.sendWind(windData);
+    //   Imu imuData = prepareIMUData();
+    //   protobufBridge.sendIMU(imuData);
+    //   udpSendPB();
+    // }
+    // else if (int(millis()) - t0_IMU >= (1000 / (uploadFrequencyIMU * 2)))
+    // {
+    //   digitalWrite(LED_PIN, LOW);
+    // }
+    // else
+    // {
+    //   digitalWrite(LED_PIN, HIGH);
+    // }
 
-    if (int(millis()) - t0_Motor >= (1000 / (uploadFrequencyMotor)))
-    {
-      Serial.println("salam");
-      Speed rpmData = prepareRPMData();
-      protobufBridge.sendSpeed(rpmData);
-      client.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+    // if (int(millis()) - t0_Motor >= (1000 / (uploadFrequencyMotor)))
+    // {
+    //   t0_Motor = millis();
+    //   Speed rpmData = prepareRPMData();
+    //   protobufBridge.sendSpeed(rpmData);
+    //   udpSendPB();
 
-      Temperature temperatureData = prepareTemperatureData();
-      protobufBridge.sendTemperature(temperatureData);
-      client.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-      t0_Motor = millis();
-    }
+    //   Temperature temperatureData = prepareTemperatureData();
+    //   protobufBridge.sendTemperature(temperatureData);
+    //   udpSendPB();
+    // }
   }
 }
