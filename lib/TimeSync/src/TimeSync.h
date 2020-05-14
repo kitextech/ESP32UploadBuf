@@ -15,8 +15,8 @@ public:
 
     // const int NTP_PACKET_SIZE = 48;
 
-    const char *timeServerName = "192.168.8.144"; // Local IP of the black-pearl pi
-    // const char* timeServerName = "dk.pool.ntp.org";
+    // const char *timeServerName = "192.168.8.144"; // Local IP of the black-pearl pi
+    const char* timeServerName = "dk.pool.ntp.org";
     // const char* timeServerName = "time.nist.gov";
 
     byte packetBuffer[NTP_PACKET_SIZE];

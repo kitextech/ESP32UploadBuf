@@ -20,6 +20,11 @@ Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/R
 #include <MedianFilter.h>
 #include <AS5040.h> // wind vane
 
+#include <stdio.h>
+#include "./pb_encode.h"
+#include "./pb_decode.h"
+#include "schema.pb.h"
+
 /*
  * AS5040.h          -> library for reading data through SSI protocol from AS5140 magnetic sensor
  * MedianFilter.h    -> library for filtering the noisy recieved analog data
@@ -27,11 +32,19 @@ Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/R
  * WiFiUdp.h         -> library for reading time by UDP protocol from NTP server
  */
 
+#define SendKey 0 // Probably not needed (TCP)
+
 // WiFi and server
 const char *ssid = "kitexField";
 const char *password = "morepower";
-const char *addr = "192.168.8.144"; // Local IP of the black-pearl pi
-// const char *addr = "192.168.8.104"; // Local IP of office laptop
+// const char *addr = "192.168.8.144"; // Local IP of the black-pearl pi
+const char *addr = "192.168.8.104"; // Local IP of office laptop
+
+// TCP
+int tcpPort = 8888;
+WiFiServer server(tcpPort);
+WiFiClient client = server.available();
+uint8_t bufferTCP[128] = { 0 };
 
 // Time
 IPAddress timeServerIP;
@@ -44,9 +57,9 @@ int64_t sysTimeAtBaseTime;
 const int secondsUntilNewTime = 300;
 
 // Upload
-int uploadFrequencyIMU = 50;
-int uploadFrequencyWind = 2;
-int uploadFrequencyRPM = 1;
+int uploadFrequencyIMU = 5;
+int uploadFrequencyWind = 3;
+int uploadFrequencyRPM = 2;
 int uploadFrequencyTemp = 1;
 int t0_IMU = millis();
 int t0_Motor = millis();
@@ -348,6 +361,36 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
   udpSendPB();
 }
 
+void readTCP(WiFiClient client)
+{
+  if (client) {
+    while (client.connected())
+    {
+      if (client.available() > 0)
+      {
+        client.read(bufferTCP, 1);
+        String str = String("Message length (bytes): ") + (bufferTCP[0]);
+        Serial.println(str);
+
+        int msg_length = bufferTCP[0];
+
+        client.read(bufferTCP, bufferTCP[0]);
+        Speed message = Speed_init_zero;
+        pb_istream_t stream = pb_istream_from_buffer(bufferTCP, msg_length);        
+        bool status = pb_decode(&stream, Speed_fields, &message);
+        
+        if (!status)
+        {
+            Serial.printf("Decoding failed: %s\n", PB_GET_ERROR(&stream));
+        }
+        
+        Serial.printf("Your RPM number was %d!\n", (int)message.RPM);
+      }
+      return;
+    }
+  }
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -362,6 +405,7 @@ void setup()
   Serial.print("Connecting to ");
   Serial.println(ssid);
 
+  WiFi.mode(WIFI_STA);  // Necessary?
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED)
@@ -372,6 +416,10 @@ void setup()
 
   Serial.printf("\nWiFi connected. IP address: ");
   Serial.println(WiFi.localIP());
+
+  server.begin(); // TCP
+  // delay(1000);
+  // client = server.available();
 
   WiFi.hostByName(addr, insertServerIP); // Define IPAddress object with the ip address string
 
@@ -385,25 +433,18 @@ void setup()
   Serial.println("Starting UDP");
   udp_time.begin(udpPortLocalTime);
   Serial.print("Local port: ");
-  //Serial.println(up);
 
   getTime();
 
-  setupAS5140();
+  // setupAS5140();
   // setupIMU();
   setupMotor();
 }
 
 void loop()
 {
-  if (millis()-sysTimeAtBaseTime >= (secondsUntilNewTime*1000))
-  {
-    getTime();
-  }
-
   digitalWrite(LED_PIN, LOW);
 
-  // Wait if not connected to wifi
   if (WiFi.status() != WL_CONNECTED)
   {
     Serial.println("Connection failed, wait 5 sec...");
@@ -411,38 +452,19 @@ void loop()
   }
   else
   { 
-    // If connected, upload and blink at specified frequency
-    sendDataAtFrequency(sendImu, t0_IMU, uploadFrequencyIMU);
+    if (millis()-sysTimeAtBaseTime >= (secondsUntilNewTime*1000))
+    {
+      getTime();
+    }
+
+    if (!client.connected()) // client = the TCP client who's going to send us something
+    {
+      client = server.available();
+    }
+    readTCP(client);
+  
+    // sendDataAtFrequency(sendImu, t0_IMU, uploadFrequencyIMU);
     sendDataAtFrequency(sendRPM, t0_RPM, uploadFrequencyRPM);
     sendDataAtFrequency(sendTemperature, t0_temp, uploadFrequencyTemp);
-    // if (int(millis()) - t0_IMU >= (1000 / uploadFrequencyIMU))
-    // {
-    //   t0_IMU = millis();
-    //   // Wind windData = prepareWindData();
-    //   // protobufBridge.sendWind(windData);
-    //   Imu imuData = prepareIMUData();
-    //   protobufBridge.sendIMU(imuData);
-    //   udpSendPB();
-    // }
-    // else if (int(millis()) - t0_IMU >= (1000 / (uploadFrequencyIMU * 2)))
-    // {
-    //   digitalWrite(LED_PIN, LOW);
-    // }
-    // else
-    // {
-    //   digitalWrite(LED_PIN, HIGH);
-    // }
-
-    // if (int(millis()) - t0_Motor >= (1000 / (uploadFrequencyMotor)))
-    // {
-    //   t0_Motor = millis();
-    //   Speed rpmData = prepareRPMData();
-    //   protobufBridge.sendSpeed(rpmData);
-    //   udpSendPB();
-
-    //   Temperature temperatureData = prepareTemperatureData();
-    //   protobufBridge.sendTemperature(temperatureData);
-    //   udpSendPB();
-    // }
   }
 }
