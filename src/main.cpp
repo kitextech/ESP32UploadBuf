@@ -70,12 +70,6 @@ Adafruit_BNO055 bno = Adafruit_BNO055(-1, 0x28);
 // AS5140-H
 AS5040 encoder(CLKpin, CSpin, DOpin, PROGpin);
 
-struct windVane
-{
-  float Direction;
-  bool Status;
-} vaneData;
-
 // Wind speed (analog read)
 const int AnalogPin = A0;
 const int VoltdivRatio = 2;
@@ -132,31 +126,19 @@ void setupAS5140()
 float getAS5140_data()
 {
   int rawData = encoder.read();
-  vaneData.Status = encoder.valid();
+  bool Status = encoder.valid();
+  float direction = 0.0F;
 
-  if (vaneData.Status == true)
+  if (Status == true)
   {
-    vaneData.Direction = mapFloat(rawData, 0, 1024, 0, 360);
-    // Serial.print("status BIN msg : \t");
-    // Serial.println(encoder.status(), BIN);
+    direction = mapFloat(rawData, 0, 1024, 0, 360);
   }
   else
   {
-    vaneData.Direction = (float)2000;
+    direction = (float)2000;
   }
-  /*
-  Serial.print("status BIN msg : \t");
-  Serial.println(encoder.status(), BIN);
-  Serial.print("\n");
-  Serial.print("encoder status char: ");
-  Serial.println(encoder.valid() ? "OK" : "Fault");
-  Serial.print("\n");
-  Serial.print("encoder status char: ");
-  Serial.println(encoder.valid() ? "OK" : "Fault");
-  Serial.print("encoder status bool: ");
-  Serial.println(vaneData.Status);
-  */
-  return vaneData.Direction;
+
+  return direction;
 }
 
 int64_t getNewTime()
