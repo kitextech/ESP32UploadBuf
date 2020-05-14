@@ -20,6 +20,8 @@ Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/R
 #include <MedianFilter.h>
 #include <AS5040.h> // wind vane
 
+#include <VescUart.h>
+
 #include <stdio.h>
 #include "./pb_encode.h"
 #include "./pb_decode.h"
@@ -45,6 +47,11 @@ int tcpPort = 8888;
 WiFiServer server(tcpPort);
 WiFiClient client = server.available();
 uint8_t bufferTCP[128] = { 0 };
+
+// VESC control
+VescUart vesc;
+int updateFrequencyVesc = 20;
+int t0_Vesc = millis();
 
 // Time
 IPAddress timeServerIP;
@@ -240,19 +247,29 @@ Wind prepareWindData()
   return windData;
 }
 
-Speed prepareRPMData()
+Speed prepareRPMData(bool rpmFromVesc=false)
 {
   Speed rpmData = Speed_init_zero;
-
   rpmData.time = newLocalTime();
-  // 60 is to convert rps to rpm; 1000 to corrigate ms to s;
-  // division by pole pairs is to get the whole rotation not only between two plus polarity magnet ¨
-  rpm = float(60 * 1000) / (float(millis() - t0_Motor)) * float(detection) / float(POLE_PAIR_NUM);
-  detection = 0;
-  Serial.print("RPM: ");
-  Serial.println(rpm);
+  
+  if (rpmFromVesc)
+  {
+    if (vesc.getVescValues())
+    {
+      rpmData.RPM = vesc.data.rpm;
+    }
+  }
+  else
+  {
+    // 60 is to convert rps to rpm; 1000 to corrigate ms to s;
+    // division by pole pairs is to get the whole rotation not only between two plus polarity magnet ¨
+    rpm = float(60 * 1000) / (float(millis() - t0_Motor)) * float(detection) / float(POLE_PAIR_NUM);
+    detection = 0;
+    rpmData.RPM = rpm;
+  }
 
-  rpmData.RPM = rpm;
+  Serial.print("RPM: ");
+  Serial.println(rpmData.RPM);
 
   return rpmData;
 }
@@ -324,7 +341,7 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
     {
       case sendRPM:
       {
-        Speed rpmData = prepareRPMData();
+        Speed rpmData = prepareRPMData(true);
         protobufBridge.sendSpeed(rpmData);
         break;
       }
@@ -361,7 +378,7 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
   udpSendPB();
 }
 
-void readTCP(WiFiClient client)
+void readAndSetRPMByTCP(WiFiClient client)
 {
   if (client) {
     while (client.connected())
@@ -384,7 +401,8 @@ void readTCP(WiFiClient client)
             Serial.printf("Decoding failed: %s\n", PB_GET_ERROR(&stream));
         }
         
-        Serial.printf("Your RPM number was %d!\n", (int)message.RPM);
+        Serial.printf("Your RPM number was %d!\nSending to the vesc...\n", (int)message.RPM);
+        vesc.setRPM(message.RPM);
       }
       return;
     }
@@ -393,8 +411,13 @@ void readTCP(WiFiClient client)
 
 void setup()
 {
-  Serial.begin(115200);
+  Serial.begin(115200);   // USB to computer
+  Serial1.begin(115200);  // rx/tx pins of ESP32 (for the vesc)
   Serial.setDebugOutput(true);
+
+  while (!Serial) {;}
+  vesc.setSerialPort(&Serial1);
+
   pinMode(LED_PIN, OUTPUT);
 
   delay(10);
@@ -461,7 +484,7 @@ void loop()
     {
       client = server.available();
     }
-    readTCP(client);
+    readAndSetRPMByTCP(client);
   
     // sendDataAtFrequency(sendImu, t0_IMU, uploadFrequencyIMU);
     sendDataAtFrequency(sendRPM, t0_RPM, uploadFrequencyRPM);
