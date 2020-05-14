@@ -179,7 +179,19 @@ void setupAS5140()
 float getAS5140_data()
 {
   int rawData = encoder.read();
-  return mapFloat(rawData, 0, 1024, 0, 360);
+  bool Status = encoder.valid();
+  float direction = 0.0F;
+
+  if (Status == true)
+  {
+    direction = mapFloat(rawData, 0, 1024, 0, 360);
+  }
+  else
+  {
+    direction = (float)2000;
+  }
+
+  return direction;
 }
 
 int64_t newLocalTime()
@@ -243,7 +255,7 @@ Wind prepareWindData()
 
   windData.speed = measuredSpeed;
   windData.direction = getAS5140_data();
-  Serial.print(windData.direction);
+
   return windData;
 }
 

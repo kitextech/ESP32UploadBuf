@@ -19,6 +19,7 @@ public:
     const char* timeServerName = "dk.pool.ntp.org";
     // const char* timeServerName = "time.nist.gov";
 
+
     byte packetBuffer[NTP_PACKET_SIZE];
 
     int64_t getTime(IPAddress timeServerIP, WiFiUDP udp);
