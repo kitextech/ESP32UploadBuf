@@ -10,9 +10,12 @@ struct parsedTime {
 struct parsedTime Ptime;
 
 // send an NTP request to the time server at the given address
-unsigned long TimeSync::sendNTPpacket(IPAddress& address)
+void TimeSync::sendNTPpacket(IPAddress& address)
+
 {
-  // Serial.println("sending NTP packet...");
+  Serial.println("sending NTP packet...");
+  Serial.println(address.toString());
+
   // set all bytes in the buffer to 0
   memset(packetBuffer, 0, NTP_PACKET_SIZE);
   // Initialize values needed to form NTP request
@@ -48,10 +51,10 @@ int64_t TimeSync::Parse(struct parsedTime *timeStruct, byte* packet){
     timeStruct->second = (epoch % 60);
     // get the fraction of seconds 
     // https://arduino.stackexchange.com/questions/49567/synching-local-clock-usign-ntp-to-milliseconds
-    uint32_t frac  = (uint32_t) packetBuffer[44] << 24
-                   | (uint32_t) packetBuffer[45] << 16
-                   | (uint32_t) packetBuffer[46] <<  8
-                   | (uint32_t) packetBuffer[47] <<  0;
+    uint32_t frac  = (uint32_t) packet[44] << 24
+                   | (uint32_t) packet[45] << 16
+                   | (uint32_t) packet[46] <<  8
+                   | (uint32_t) packet[47] <<  0;
     timeStruct->milisecond = ((uint64_t) frac * 1000 ) >> 32;
 
 
@@ -60,26 +63,47 @@ int64_t TimeSync::Parse(struct parsedTime *timeStruct, byte* packet){
 
 
 int64_t TimeSync::getTime(IPAddress timeServerIP) {
-  WiFi.hostByName(ntpServerName, timeServerIP);
-  sendNTPpacket(timeServerIP); // send an NTP packet to a time server
-  delay(500);
-  int cb = udp.parsePacket();
-  if (!cb) {
-    Serial.println("no packet yet");
+  // bool gotTheTime = false;
+
+  while (true) {
+    WiFi.hostByName(timeServerName, timeServerIP); // timeServerName
+    sendNTPpacket(timeServerIP, udp); // send an NTP packet to a time server
+    
+    delay(500);
+    int cb = udp.parsePacket();
+    if (!cb) {
+      int t0 = millis();
+      int t1 = millis();
+      int dt = 0;
+      while (millis()-t0 < 500) {
+        if (dt / 100) {
+          digitalWrite(0, HIGH);
+          t1 = millis();
+        } else if (dt / 75) {
+          digitalWrite(0, LOW);
+        } else {
+          digitalWrite(0, HIGH);
+        }
+        dt = millis()-t1;
+      }
+      digitalWrite(0, LOW);
+      Serial.println("no packet yet");
+    }
+    else {
+      udp.read(packetBuffer, NTP_PACKET_SIZE);
+      int64_t time = Parse(&Ptime, packetBuffer);
+      // print in serial port 
+      Serial.println("Got the time: ");
+      Serial.print (Ptime.hour);
+      Serial.print (":");
+      Serial.print (Ptime.minute);
+      Serial.print (":");
+      Serial.print (Ptime.second);
+      Serial.print (":");
+      Serial.println (Ptime.milisecond);
+      return time;
+    }
   }
-  else {
-    udp.read(packetBuffer, NTP_PACKET_SIZE);
-    int64_t time = Parse(&Ptime, packetBuffer);
-    // print in serial port 
-    Serial.print (Ptime.hour);
-    Serial.print (":");
-    Serial.print (Ptime.minute);
-    Serial.print (":");
-    Serial.print (Ptime.second);
-    Serial.print (":");
-    Serial.println (Ptime.milisecond);
-    return time;
-  }
-  Serial.println ( "PROBLEM!");   
-  return 0;
+  // Serial.println ( "PROBLEM!");   
+  // return 0;
 }

@@ -20,7 +20,7 @@
             byte packetBuffer[NTP_PACKET_SIZE];
 
             int64_t getTime(IPAddress timeServerIP);
-            unsigned long sendNTPpacket(IPAddress& address);
+            void sendNTPpacket(IPAddress& address);
             int64_t Parse(struct parsedTime *timeStruct, byte* packet);
 
     };
