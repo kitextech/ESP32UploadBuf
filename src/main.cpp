@@ -6,8 +6,8 @@
 #include "pb_encode.h"
 
 // #include <WiFi.h>
-#include <ESP8266WiFi.h>
-#include <WiFiUdp.h> // NTC
+// #include <WiFi.h>
+// #include <WiFiUdp.h> // NTC
 
 #include <TimeSync.h>
 
@@ -24,7 +24,7 @@ WiFiClient client;
 
 TimeSync timeSync;
 
-const char* addr     = "192.168.8.126";
+const char* addr     = "192.168.8.107";
 const uint16_t port  = 10101;
 
 
@@ -32,7 +32,7 @@ const uint16_t port  = 10101;
 // NTC
 
 IPAddress timeServerIP;
-WiFiUDP udp;
+// WiFiUDP udp;
 
 unsigned int localPort = 2390;
 
@@ -68,11 +68,11 @@ void setup() {
   // NTC
   // connect to udp 
   Serial.println("Starting UDP");
-  udp.begin(localPort);
+  timeSync.udp.begin(localPort);
   Serial.print("Local port: ");
   // Serial.println(up);
 
-  baseTime = timeSync.getTime(timeServerIP, udp);
+  baseTime = timeSync.getTime(timeServerIP);
   sysTimeAtBaseTime = int64_t(millis());
 
   // delay(100000);
