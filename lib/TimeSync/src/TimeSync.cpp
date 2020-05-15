@@ -66,8 +66,8 @@ int64_t TimeSync::getTime(IPAddress timeServerIP) {
   // bool gotTheTime = false;
 
   while (true) {
-    WiFi.hostByName(timeServerName, timeServerIP); // timeServerName
-    sendNTPpacket(timeServerIP, udp); // send an NTP packet to a time server
+    WiFi.hostByName(ntpServerName, timeServerIP); // timeServerName
+    sendNTPpacket(timeServerIP); // send an NTP packet to a time server
     
     delay(500);
     int cb = udp.parsePacket();

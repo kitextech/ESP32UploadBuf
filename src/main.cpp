@@ -36,10 +36,10 @@ Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/R
 #define SendKey 0 // Probably not needed (TCP)
 
 // WiFi and server
-const char *ssid = "kitexField";
+const char *ssid = "kitex";
 const char *password = "morepower";
 // const char *addr = "192.168.8.144"; // Local IP of the black-pearl pi
-const char *addr = "192.168.8.104"; // Local IP of office laptop
+const char *addr = "192.168.8.107"; // Local IP of office laptop
 
 // TCP
 int tcpPort = 8888;
@@ -54,7 +54,7 @@ int t0_Vesc = millis();
 
 // Time
 IPAddress timeServerIP;
-WiFiUDP udp_time;
+// WiFiUDP udp_time;
 unsigned int udpPortLocalTime = 2390;
 
 TimeSync timeSync;
@@ -333,7 +333,7 @@ Temperature prepareTemperatureData()
 void getTime()
 {
   Serial.println("I shall now fetch the time!");
-  baseTime = timeSync.getTime(timeServerIP, udp_time);
+  baseTime = timeSync.getTime(timeServerIP);
   sysTimeAtBaseTime = int64_t(millis());
 }
 
@@ -466,7 +466,7 @@ void setup()
   // NTC
   // connect to udp_time
   Serial.println("Starting UDP");
-  udp_time.begin(udpPortLocalTime);
+  timeSync.udp.begin(udpPortLocalTime);
   Serial.print("Local port: ");
 
   getTime();
@@ -499,7 +499,7 @@ void loop()
     readAndSetRPMByTCP(client);
   
     // sendDataAtFrequency(sendImu, t0_IMU, uploadFrequencyIMU);
-    sendDataAtFrequency(sendRPM, t0_RPM, uploadFrequencyRPM);
-    sendDataAtFrequency(sendTemperature, t0_temp, uploadFrequencyTemp);
+    // sendDataAtFrequency(sendRPM, t0_RPM, uploadFrequencyRPM);
+    // sendDataAtFrequency(sendTemperature, t0_temp, uploadFrequencyTemp);
   }
 }
