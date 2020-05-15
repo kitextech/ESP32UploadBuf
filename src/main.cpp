@@ -1,4 +1,3 @@
-
 /*
 RPM part is based on Arduino Hall Effect Sensor Project by Arvind Sanjeev
 Link: http://diyhacking.com
@@ -11,8 +10,8 @@ Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/R
 
 #include <Arduino.h>
 #include <iostream>
-#include <ESP8266WiFi.h>
-#include <WiFiUdp.h> // NTC
+// #include <WiFi.h>
+// #include <WiFiUdp.h> // NTC
 #include <TimeSync.h>
 #include <Adafruit_Sensor.h> // BNO-055
 #include <Adafruit_BNO055.h> // BNO-055
@@ -127,6 +126,7 @@ ICACHE_RAM_ATTR void magnet_detect() // This function is called whenever a magne
   detection++;
 }
 
+
 enum SendDataType
 {
   sendRPM,
@@ -230,7 +230,7 @@ Imu prepareIMUData()
   imuData.orientation.y = quat.y();
   imuData.orientation.z = quat.z();
   imuData.orientation.w = quat.w();
-
+  
   return imuData;
 }
 
