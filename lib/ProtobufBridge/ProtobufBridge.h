@@ -8,7 +8,6 @@
 #include "pb_common.h"
 #include "pb.h"
 #include "pb_encode.h"
-#include <WiFi.h>
 
 class ProtobufBridge
 {
@@ -18,7 +17,6 @@ public:
   static size_t messageLength;
   size_t wrapMessageLength;
   uint8_t bufferWrapper[512];
-  WiFiUDP udp;
 
   // functions
   void sendIMU(Imu imu);

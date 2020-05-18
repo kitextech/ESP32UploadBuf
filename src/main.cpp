@@ -10,7 +10,7 @@ Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/R
 
 #include <Arduino.h>
 #include <iostream>
-// #include <WiFi.h>
+#include <WiFi.h>
 // #include <WiFiUdp.h> // NTC
 #include <TimeSync.h>
 #include <Adafruit_Sensor.h> // BNO-055
@@ -56,8 +56,7 @@ int t0_Vesc = millis();
 
 // Time
 IPAddress timeServerIP;
-// WiFiUDP udp_time;
-unsigned int udpPortLocalTime = 2390;
+unsigned int udpPortLocal = 2390;
 
 TimeSync timeSync;
 int64_t baseTime;
@@ -76,8 +75,9 @@ int t0_RPM = millis();
 int t0_temp = millis();
 
 IPAddress insertServerIP;
-// WiFiUDP udp_insert;
 unsigned int udpPortRemoteInsert = 10102;
+
+WiFiUDP udp;
 
 ProtobufBridge protobufBridge;
 
@@ -342,16 +342,9 @@ Temperature prepareTemperatureData()
 void getTime()
 {
   Serial.println("I shall now fetch the time!");
-  baseTime = timeSync.getTime(timeServerIP);
+  baseTime = timeSync.getTime(timeServerIP, udp);
   sysTimeAtBaseTime = int64_t(millis());
 }
-
-// void udpSendPB()
-// {
-//   udp_insert.beginPacket(insertServerIP, udpPortRemoteInsert);
-//   udp_insert.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-//   udp_insert.endPacket();
-// }
 
 void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency)
 {
@@ -387,9 +380,9 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
       default:
         break;
     }
-    protobufBridge.udp.beginPacket(insertServerIP, udpPortRemoteInsert);
-    protobufBridge.udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-    protobufBridge.udp.endPacket();
+    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+    udp.endPacket();
   }
   else if (int(millis()) - t0 >= (1000 / (uploadFrequency * 2)))
   {
@@ -458,7 +451,7 @@ void setup()
   Serial.println(ssid);
 
   WiFi.mode(WIFI_STA);  // Necessary?
-  WiFi.begin(ssid, password);
+    WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED)
   {
@@ -476,13 +469,12 @@ void setup()
   WiFi.hostByName(addr, insertServerIP); // Define IPAddress object with the ip address string
 
   
-  // udp_insert.begin(udpPortRemoteInsert);
-  protobufBridge.udp.begin(1337);  // 1337 is just random
+
 
   // NTC
   // connect to udp_time
   Serial.println("Starting UDP");
-  timeSync.udp.begin(udpPortLocalTime);
+  udp.begin(udpPortLocal);
   Serial.print("Local port: ");
 
   getTime();
@@ -503,7 +495,6 @@ void loop()
   }
   else
   { 
-    // if (millis()-sysTimeAtBaseTime >= (secondsUntilNewTime*1000))
     if (!(uint32_t(millis()) % (secondsUntilNewTime*1000)))
     {
       sysTimeAtBaseTime = int64_t(millis());
@@ -514,7 +505,7 @@ void loop()
     {
       client = server.available();
     }
-    // readAndSetRPMByTCP(client);
+    readAndSetRPMByTCP(client);
 
     sendDataAtFrequency(sendWind, t0_Wind, uploadFrequencyWind);
 
