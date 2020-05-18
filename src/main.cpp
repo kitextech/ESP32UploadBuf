@@ -19,6 +19,7 @@ Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/R
 #include <MedianFilter.h>
 #include <AS5040.h> // wind vane
 
+#include <HardwareSerial.h>
 #include <VescUart.h>
 
 #include <stdio.h>
@@ -36,10 +37,10 @@ Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/R
 #define SendKey 0 // Probably not needed (TCP)
 
 // WiFi and server
-const char *ssid = "kitex";
+const char *ssid = "kitexField";
 const char *password = "morepower";
 // const char *addr = "192.168.8.144"; // Local IP of the black-pearl pi
-const char *addr = "192.168.8.107"; // Local IP of office laptop
+const char *addr = "192.168.8.104"; // Local IP of office laptop
 
 // TCP
 int tcpPort = 8888;
@@ -48,6 +49,7 @@ WiFiClient client = server.available();
 uint8_t bufferTCP[128] = { 0 };
 
 // VESC control
+HardwareSerial SerialVesc(2);
 VescUart vesc;
 int updateFrequencyVesc = 20;
 int t0_Vesc = millis();
@@ -268,6 +270,7 @@ Speed prepareRPMData(bool rpmFromVesc=false)
   {
     if (vesc.getVescValues())
     {
+      // Serial.printf("Current RPM: %d \n", )
       rpmData.RPM = vesc.data.rpm;
     }
   }
@@ -412,9 +415,11 @@ void readAndSetRPMByTCP(WiFiClient client)
         {
             Serial.printf("Decoding failed: %s\n", PB_GET_ERROR(&stream));
         }
-        
-        Serial.printf("Your RPM number was %d!\nSending to the vesc...\n", (int)message.RPM);
-        vesc.setRPM(message.RPM);
+        else
+        {
+          Serial.printf("Your RPM number was %d!\nSending to the vesc...\n", (int)message.RPM);
+          vesc.setRPM(message.RPM);
+        }
       }
       return;
     }
@@ -424,11 +429,15 @@ void readAndSetRPMByTCP(WiFiClient client)
 void setup()
 {
   Serial.begin(115200);   // USB to computer
-  Serial1.begin(115200);  // rx/tx pins of ESP32 (for the vesc)
   Serial.setDebugOutput(true);
-
   while (!Serial) {;}
-  vesc.setSerialPort(&Serial1);
+
+  // Setup serial / UART1 for the vesc
+  SerialVesc.begin(115200, SERIAL_8N1, 16, 17);
+  vesc.setSerialPort( & SerialVesc);
+
+  // Serial1.begin(115200);  // rx/tx pins of ESP32 (for the vesc)
+  // vesc.setSerialPort(&Serial1);
 
   pinMode(LED_PIN, OUTPUT);
 
@@ -489,7 +498,18 @@ void loop()
   { 
     if (millis()-sysTimeAtBaseTime >= (secondsUntilNewTime*1000))
     {
+      sysTimeAtBaseTime = int64_t(millis());
       getTime();
+      if (vesc.getVescValues())
+      {
+        Serial.printf("Current RPM: %ld \n", vesc.data.rpm);
+        // rpmData.RPM = vesc.data.rpm;
+      }
+      else
+      {
+        Serial.println("Got no data from Vesc");
+      }
+      
     }
 
     if (!client.connected()) // client = the TCP client who's going to send us something
