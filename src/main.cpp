@@ -40,7 +40,7 @@ Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/R
 const char *ssid = "kitexField";
 const char *password = "morepower";
 // const char *addr = "192.168.8.144"; // Local IP of the black-pearl pi
-const char *addr = "192.168.8.104"; // Local IP of office laptop
+const char *addr = "192.168.8.100"; // Local IP of office laptop
 
 // TCP
 int tcpPort = 8888;
@@ -62,7 +62,7 @@ unsigned int udpPortLocalTime = 2390;
 TimeSync timeSync;
 int64_t baseTime;
 int64_t sysTimeAtBaseTime;
-const int secondsUntilNewTime = 300;
+const uint32_t secondsUntilNewTime = 300;
 
 // Upload
 int uploadFrequencyIMU = 5;
@@ -70,12 +70,13 @@ int uploadFrequencyWind = 3;
 int uploadFrequencyRPM = 2;
 int uploadFrequencyTemp = 1;
 int t0_IMU = millis();
+int t0_Wind = millis();
 int t0_Motor = millis();
 int t0_RPM = millis();
 int t0_temp = millis();
 
 IPAddress insertServerIP;
-WiFiUDP udp_insert;
+// WiFiUDP udp_insert;
 unsigned int udpPortRemoteInsert = 10102;
 
 ProtobufBridge protobufBridge;
@@ -255,24 +256,29 @@ Wind prepareWindData()
   // Serial.print("wind speed : \t");
   // Serial.println(measuredSpeed);
 
-  windData.speed = measuredSpeed;
-  windData.direction = getAS5140_data();
+  windData.speed = 0; //measuredSpeed;
+  windData.direction = 0; //getAS5140_data();
 
   return windData;
 }
 
-Speed prepareRPMData(bool rpmFromVesc=false)
+Speed prepareRPMData(bool readFromVesc=true)
 {
   Speed rpmData = Speed_init_zero;
   rpmData.time = newLocalTime();
   
-  if (rpmFromVesc)
+  if (readFromVesc)
   {
     if (vesc.getVescValues())
     {
       // Serial.printf("Current RPM: %d \n", )
       rpmData.RPM = vesc.data.rpm;
     }
+    else
+    {
+      return rpmData;
+    }
+    
   }
   else
   {
@@ -340,12 +346,12 @@ void getTime()
   sysTimeAtBaseTime = int64_t(millis());
 }
 
-void udpSendPB()
-{
-  udp_insert.beginPacket(insertServerIP, udpPortRemoteInsert);
-  udp_insert.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-  udp_insert.endPacket();
-}
+// void udpSendPB()
+// {
+//   udp_insert.beginPacket(insertServerIP, udpPortRemoteInsert);
+//   udp_insert.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+//   udp_insert.endPacket();
+// }
 
 void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency)
 {
@@ -381,6 +387,9 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
       default:
         break;
     }
+    protobufBridge.udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+    protobufBridge.udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+    protobufBridge.udp.endPacket();
   }
   else if (int(millis()) - t0 >= (1000 / (uploadFrequency * 2)))
   {
@@ -390,7 +399,6 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
   {
     digitalWrite(LED_PIN, HIGH);
   }
-  udpSendPB();
 }
 
 void readAndSetRPMByTCP(WiFiClient client)
@@ -467,10 +475,9 @@ void setup()
 
   WiFi.hostByName(addr, insertServerIP); // Define IPAddress object with the ip address string
 
-  // AS5140H
-  setupAS5140();
-
-  udp_insert.begin(udpPortRemoteInsert);
+  
+  // udp_insert.begin(udpPortRemoteInsert);
+  protobufBridge.udp.begin(1337);  // 1337 is just random
 
   // NTC
   // connect to udp_time
@@ -496,28 +503,21 @@ void loop()
   }
   else
   { 
-    if (millis()-sysTimeAtBaseTime >= (secondsUntilNewTime*1000))
+    // if (millis()-sysTimeAtBaseTime >= (secondsUntilNewTime*1000))
+    if (!(uint32_t(millis()) % (secondsUntilNewTime*1000)))
     {
       sysTimeAtBaseTime = int64_t(millis());
       getTime();
-      if (vesc.getVescValues())
-      {
-        Serial.printf("Current RPM: %ld \n", vesc.data.rpm);
-        // rpmData.RPM = vesc.data.rpm;
-      }
-      else
-      {
-        Serial.println("Got no data from Vesc");
-      }
-      
     }
 
     if (!client.connected()) // client = the TCP client who's going to send us something
     {
       client = server.available();
     }
-    readAndSetRPMByTCP(client);
-  
+    // readAndSetRPMByTCP(client);
+
+    sendDataAtFrequency(sendWind, t0_Wind, uploadFrequencyWind);
+
     // sendDataAtFrequency(sendImu, t0_IMU, uploadFrequencyIMU);
     // sendDataAtFrequency(sendRPM, t0_RPM, uploadFrequencyRPM);
     // sendDataAtFrequency(sendTemperature, t0_temp, uploadFrequencyTemp);
