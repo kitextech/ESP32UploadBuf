@@ -34,6 +34,9 @@ Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/R
  * WiFiUdp.h         -> library for reading time by UDP protocol from NTP server
  */
 
+// Sensor include statements
+#include <PowerSensor.h>
+
 #define SendKey 0 // Probably not needed (TCP)
 
 // WiFi and server
@@ -68,13 +71,13 @@ int uploadFrequencyIMU = 5;
 int uploadFrequencyWind = 3;
 int uploadFrequencyRPM = 2;
 int uploadFrequencyTemp = 1;
-int uploadFrequencyPower = 1;
+// int uploadFrequencyPower = 1;
 int t0_IMU = millis();
 int t0_Wind = millis();
 int t0_Motor = millis();
 int t0_RPM = millis();
 int t0_temp = millis();
-int t0_power = millis();
+// int t0_power = millis();
 
 IPAddress insertServerIP;
 unsigned int udpPortRemoteInsert = 10102;
@@ -122,33 +125,35 @@ float rpm = 0;
 
 int adc_samples[NUMSAMPLES];
 
-//// Power measurements
-#define NUM_SAMPLES 50
-#define VOLTAGE_PIN A2
-#define CURRENT_PIN A3
+// Power measurements
+PowerSensor powerSensor(50, A2, A3, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1);
 
-int sumC = 0;                    // sum of samples taken
-int sumV = 0;
-unsigned char sample_count = 0; // current sample number
+// #define NUM_SAMPLES 50
+// #define VOLTAGE_PIN A2
+// #define CURRENT_PIN A3
 
-float current_adc = 0.0;            // corected adc measurements
-float voltage_adc = 0.0;
-float current = 0.0;                // final values
-float voltage = 0.0;
+// int sumC = 0;                    // sum of samples taken
+// int sumV = 0;
+// unsigned char sample_count = 0; // current sample number
 
-// linear regression on the adc measured (x) vs nominal expected (y)
-// two curces are fit, switch between them at 2.6V measured ADC
-float b1 = 0.12;
-float m1 = 1;
-float b2 = 0.8305;
-float m2 = 0.7123;
+// float current_adc = 0.0;            // corected adc measurements
+// float voltage_adc = 0.0;
+// float current = 0.0;                // final values
+// float voltage = 0.0;
 
-// linear regression on the sensor measured (x) vs nominal expected (y)
-// voltage is from datasheet, current is supposed to be 36 by datasheet, however further corrections were needed
-float b_V = 0;
-float m_V = 18.1;
-float b_C = -1.866;
-float m_C = 28.6856;
+// // linear regression on the adc measured (x) vs nominal expected (y)
+// // two curces are fit, switch between them at 2.6V measured ADC
+// float b1 = 0.12;
+// float m1 = 1;
+// float b2 = 0.8305;
+// float m2 = 0.7123;
+
+// // linear regression on the sensor measured (x) vs nominal expected (y)
+// // voltage is from datasheet, current is supposed to be 36 by datasheet, however further corrections were needed
+// float b_V = 0;
+// float m_V = 18.1;
+// float b_C = -1.866;
+// float m_C = 28.6856;
 
 
 // Define the LED pin - different for different ESP's
@@ -370,55 +375,55 @@ Temperature prepareTemperatureData()
   return temperatureData;
 }
 
-Power preparePowerData()
-{
-  Power powerData = Power_init_zero;
+// Power preparePowerData()
+// {
+//   Power powerData = Power_init_zero;
 
-  powerData.time = newLocalTime();
+//   powerData.time = newLocalTime();
 
-  // take a number of analog samples and add them up
-  while (sample_count < NUM_SAMPLES) {
-      sumV += analogRead(VOLTAGE_PIN);
-      sumC += analogRead(CURRENT_PIN);
-      sample_count++;
-  }
+//   // take a number of analog samples and add them up
+//   while (sample_count < NUM_SAMPLES) {
+//       sumV += analogRead(VOLTAGE_PIN);
+//       sumC += analogRead(CURRENT_PIN);
+//       sample_count++;
+//   }
 
-  // calculate the voltage
-  // 12-bit ADC sensors, 3.3V sensor signal
-  voltage_adc = ((float)sumV / (float)NUM_SAMPLES) * 3.3 / 4095.0;
-  current_adc = ((float)sumC / (float)NUM_SAMPLES * 3.3) / 4095.0;
+//   // calculate the voltage
+//   // 12-bit ADC sensors, 3.3V sensor signal
+//   voltage_adc = ((float)sumV / (float)NUM_SAMPLES) * 3.3 / 4095.0;
+//   current_adc = ((float)sumC / (float)NUM_SAMPLES * 3.3) / 4095.0;
 
-  // correction based on oscilloscope measurement and linear regression (only ADC of the ESP32)
-  if (voltage_adc > 0 && voltage_adc < 2.6)
-    voltage_adc = voltage_adc * m1 + b1;
-  else if (voltage_adc >= 2.6)
-    voltage_adc = voltage_adc * m2 + b2;
+//   // correction based on oscilloscope measurement and linear regression (only ADC of the ESP32)
+//   if (voltage_adc > 0 && voltage_adc < 2.6)
+//     voltage_adc = voltage_adc * m1 + b1;
+//   else if (voltage_adc >= 2.6)
+//     voltage_adc = voltage_adc * m2 + b2;
   
-  if (current_adc > 0 && current_adc < 2.6)
-    current_adc = current_adc * m1 + b1;
-  else if (current_adc >= 2.6)
-    current_adc = current_adc * m2 + b2;
+//   if (current_adc > 0 && current_adc < 2.6)
+//     current_adc = current_adc * m1 + b1;
+//   else if (current_adc >= 2.6)
+//     current_adc = current_adc * m2 + b2;
 
-  // multiplyer factors based on further measurements (datasheet was only correct for the voltage)
-  voltage = voltage_adc * m_V + b_V;
-  current = current_adc > 0 ? current_adc * m_C + b_C : 0;
+//   // multiplyer factors based on further measurements (datasheet was only correct for the voltage)
+//   voltage = voltage_adc * m_V + b_V;
+//   current = current_adc > 0 ? current_adc * m_C + b_C : 0;
 
-  Serial.print(voltage);
-  Serial.println(" V");
-  Serial.print(current);
-  Serial.println(" A");
-  Serial.print(voltage * current);
-  Serial.println(" W");
+//   Serial.print(voltage);
+//   Serial.println(" V");
+//   Serial.print(current);
+//   Serial.println(" A");
+//   Serial.print(voltage * current);
+//   Serial.println(" W");
 
-  sample_count = 0;
-  sumV = 0;
-  sumC = 0;
+//   sample_count = 0;
+//   sumV = 0;
+//   sumC = 0;
 
-  powerData.voltage = voltage;
-  powerData.current = current;
+//   powerData.voltage = voltage;
+//   powerData.current = current;
 
-  return powerData;
-}
+//   return powerData;
+// }
 
 void getTime()
 {
@@ -460,7 +465,7 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
       }
       case sendPower:
       {
-        Power powerData = preparePowerData();
+        Power powerData = powerSensor.prepareData(newLocalTime());
         protobufBridge.sendPower(powerData);
         break;
       }
@@ -599,6 +604,6 @@ void loop()
     // sendDataAtFrequency(sendImu, t0_IMU, uploadFrequencyIMU);
     // sendDataAtFrequency(sendRPM, t0_RPM, uploadFrequencyRPM);
     // sendDataAtFrequency(sendTemperature, t0_temp, uploadFrequencyTemp);
-    sendDataAtFrequency(sendPower, t0_power, uploadFrequencyPower);
+    sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
   }
 }
