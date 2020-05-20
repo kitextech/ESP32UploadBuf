@@ -124,8 +124,8 @@ int adc_samples[NUMSAMPLES];
 
 //// Power measurements
 #define NUM_SAMPLES 50
-#define VOLTAGE_PIN A0
-#define CURRENT_PIN A1
+#define VOLTAGE_PIN A2
+#define CURRENT_PIN A3
 
 int sumC = 0;                    // sum of samples taken
 int sumV = 0;
