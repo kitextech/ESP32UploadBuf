@@ -12,7 +12,7 @@
 class ProtobufBridge
 {
 public:
-  //variables
+  //variables and objects
   static uint8_t buffer[128];
   static size_t messageLength;
   size_t wrapMessageLength;
@@ -23,6 +23,7 @@ public:
   void sendWind(Wind wind);
   void sendSpeed(Speed speed);
   void sendTemperature(Temperature temperature);
+  void sendPower(Power power);
   static bool writeBuffer(pb_ostream_t *stream, const pb_field_iter_t *field, void *const *arg);
 
 private:

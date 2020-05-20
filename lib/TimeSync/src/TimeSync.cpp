@@ -10,7 +10,7 @@ struct parsedTime {
 struct parsedTime Ptime;
 
 // send an NTP request to the time server at the given address
-void TimeSync::sendNTPpacket(IPAddress& address)
+void TimeSync::sendNTPpacket(IPAddress& address, WiFiUDP &udp)
 
 {
   Serial.println("sending NTP packet...");
@@ -62,12 +62,12 @@ int64_t TimeSync::Parse(struct parsedTime *timeStruct, byte* packet){
 }
 
 
-int64_t TimeSync::getTime(IPAddress timeServerIP) {
+int64_t TimeSync::getTime(IPAddress timeServerIP, WiFiUDP &udp) {
   // bool gotTheTime = false;
 
   while (true) {
     WiFi.hostByName(ntpServerName, timeServerIP); // timeServerName
-    sendNTPpacket(timeServerIP); // send an NTP packet to a time server
+    sendNTPpacket(timeServerIP, udp); // send an NTP packet to a time server
     
     delay(500);
     int cb = udp.parsePacket();
