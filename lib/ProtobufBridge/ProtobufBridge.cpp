@@ -112,7 +112,7 @@ void ProtobufBridge::sendSpeed(Speed speed) {
 
   // wrapper
   Wrapper wrap = Wrapper_init_zero;
-  wrap.type = Wrapper_DataType_WIND;
+  wrap.type = Wrapper_DataType_SPEED;
   wrap.data.funcs.encode = &ProtobufBridge::writeBuffer;
 
   status = pb_encode(&stream, Wrapper_fields, &wrap);
@@ -149,7 +149,7 @@ void ProtobufBridge::sendTemperature(Temperature temperature) {
 
   // wrapper
   Wrapper wrap = Wrapper_init_zero;
-  wrap.type = Wrapper_DataType_WIND;
+  wrap.type = Wrapper_DataType_TEMPERATURE;
   wrap.data.funcs.encode = &ProtobufBridge::writeBuffer;
 
   status = pb_encode(&stream, Wrapper_fields, &wrap);
@@ -186,7 +186,7 @@ void ProtobufBridge::sendPower(Power power) {
 
   // wrapper
   Wrapper wrap = Wrapper_init_zero;
-  wrap.type = Wrapper_DataType_WIND;
+  wrap.type = Wrapper_DataType_POWER;
   wrap.data.funcs.encode = &ProtobufBridge::writeBuffer;
 
   status = pb_encode(&stream, Wrapper_fields, &wrap);

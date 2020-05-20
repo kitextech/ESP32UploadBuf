@@ -40,7 +40,7 @@ Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/R
 const char *ssid = "kitexField";
 const char *password = "morepower";
 // const char *addr = "192.168.8.144"; // Local IP of the black-pearl pi
-const char *addr = "192.168.8.100"; // Local IP of office laptop
+const char *addr = "192.168.8.101"; // Local IP of office laptop
 
 // TCP
 int tcpPort = 8888;
