@@ -1,6 +1,6 @@
 #include "WindSensor.h"
 
-WindSensor::WindSensor(int ADC_pin, int voltDivRatio, float vMin, float vMax, float SpeedMin, float SpeedMax, int Freq)
+WindSensor::WindSensor(uint8_t ADC_pin, int voltDivRatio, float vMin, float vMax, float SpeedMin, float SpeedMax, int Freq)
 {
   t0 = millis();
   voltMin = vMin / voltDivRatio;
@@ -55,21 +55,27 @@ Wind WindSensor::prepareData(int64_t time)
   windData.time = time;
 
   medFilter.in(analogRead(analogPin));
-  Serial.println(analogPin);
-  int rawSensorData = medFilter.out();
+  float rawSensorData = (float)medFilter.out();
   // map the raw sensor data to the voltage between 0.0 to 3.0
-  float sensorValue = mapFloat(float(rawSensorData), 6.0, 1024.0, 0.0, 1.0);
+  float sensorValue = mapFloat(analogRead(analogPin), 95.0F, 1024.0F, 0.195F, 1.0F);
   /* 
      * convert the voltage to wind speed 
      * calibration refrence 
      * https://thepihut.com/products/adafruit-anemometer-wind-speed-sensor-w-analog-voltage-output
-    */
+  */
   // float measuredSpeed = mapFloat(sensorValue, voltMin, voltMax, speedMin, speedMax);
   // Serial.print("wind speed : \t");
   // Serial.println(measuredSpeed);
 
   windData.speed = mapFloat(sensorValue, voltMin, voltMax, speedMin, speedMax);
   windData.direction = windDirection();
-
+  /*
+  Serial.print("Wind : ");
+  Serial.println(windData.speed);
+  Serial.print("Analog read : ");
+  Serial.println(analogRead(analogPin));
+  Serial.print("Raw Volt : ");
+  Serial.println(sensorValue);
+  */
   return windData;
 }

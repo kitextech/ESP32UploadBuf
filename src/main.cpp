@@ -40,7 +40,7 @@ Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/R
 
 // Create desired sensors
 PowerSensor powerSensor(50, A2, A3, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1);
-WindSensor windSensor(A0, 2, 0.4, 2, 0.2, 32.4, 3);
+WindSensor windSensor(A2, 2, 0.4F, 2.0F, 0.2F, 32.4F, 3);
 
 // #define SendKey 0 // Probably not needed (TCP)
 
@@ -601,7 +601,6 @@ void loop()
     // readAndSetRPMByTCP(client);
 
     sendDataAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
-
     // sendDataAtFrequency(sendImu, t0_IMU, uploadFrequencyIMU);
     // sendDataAtFrequency(sendRPM, t0_RPM, uploadFrequencyRPM);
     // sendDataAtFrequency(sendTemperature, t0_temp, uploadFrequencyTemp);
