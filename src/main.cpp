@@ -36,8 +36,13 @@ Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/R
 
 // Sensor include statements
 #include <PowerSensor.h>
+#include <WindSensor.h>
 
-#define SendKey 0 // Probably not needed (TCP)
+// Create desired sensors
+PowerSensor powerSensor(50, A2, A3, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1);
+WindSensor windSensor(A0, 2, 0.4, 2, 0.2, 32.4, 3);
+
+// #define SendKey 0 // Probably not needed (TCP)
 
 // WiFi and server
 const char *ssid = "kitexField";
@@ -68,12 +73,12 @@ const uint32_t secondsUntilNewTime = 300;
 
 // Upload
 int uploadFrequencyIMU = 5;
-int uploadFrequencyWind = 3;
+// int uploadFrequencyWind = 3;
 int uploadFrequencyRPM = 2;
 int uploadFrequencyTemp = 1;
 // int uploadFrequencyPower = 1;
 int t0_IMU = millis();
-int t0_Wind = millis();
+// int t0_Wind = millis();
 int t0_Motor = millis();
 int t0_RPM = millis();
 int t0_temp = millis();
@@ -90,22 +95,18 @@ ProtobufBridge protobufBridge;
 #define BNO055_SAMPLERATE_DELAY_MS (10)
 Adafruit_BNO055 bno = Adafruit_BNO055(-1, 0x28);
 
-// Wind direction (AS5140-H)
-const int CSpin = 15;
-const int CLKpin = 14;
-const int DOpin = 12;
-const int PROGpin = 13;
-AS5040 encoder(CLKpin, CSpin, DOpin, PROGpin);
+// // Wind direction
+// AS5040 windDirEncoder(14, 15, 12, 13);
 
-// Wind speed (analog read)
-const int AnalogPin = A0;
-const int VoltdivRatio = 2;
-const float minVoltage = 0.4 / VoltdivRatio;
-const float maxVoltage = 2.0 / VoltdivRatio;
-const float minSpeed = 0.2;
-const float maxSpeed = 32.4;
-const int updateFreq = 5;
-MedianFilter MedFilter(1, 0);
+// // Wind speed (analog read)
+// const int AnalogPin = A0;
+// const int VoltdivRatio = 2;
+// const float minVoltage = 0.4 / VoltdivRatio;
+// const float maxVoltage = 2.0 / VoltdivRatio;
+// const float minSpeed = 0.2;
+// const float maxSpeed = 32.4;
+// const int updateFreq = 5;
+// MedianFilter MedFilter(1, 0);
 
 //// Motor measurements (RPM + temperature)
 // Hall sensor settings
@@ -126,7 +127,6 @@ float rpm = 0;
 int adc_samples[NUMSAMPLES];
 
 // Power measurements
-PowerSensor powerSensor(50, A2, A3, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1);
 
 // #define NUM_SAMPLES 50
 // #define VOLTAGE_PIN A2
@@ -203,35 +203,36 @@ void setupIMU()
   Serial.println("Calibration status values: 0=uncalibrated, 3=fully calibrated");
 }
 
-void setupAS5140()
-{
-  // connect to the AS5140 sensor
-  if (!encoder.begin())
-  {
-    Serial.println("Error setting up AS5140");
-  }
-  else
-  {
-    Serial.println("Successfully setting up AS5140");
-  }
-}
-float getAS5140_data()
-{
-  int rawData = encoder.read();
-  bool Status = encoder.valid();
-  float direction = 0.0F;
+// void setupAS5140()
+// {
+//   // connect to the AS5140 sensor
+//   if (!windDirEncoder.begin())
+//   {
+//     Serial.println("Error setting up AS5140");
+//   }
+//   else
+//   {
+//     Serial.println("Successfully setting up AS5140");
+//   }
+// }
 
-  if (Status == true)
-  {
-    direction = mapFloat(rawData, 0, 1024, 0, 360);
-  }
-  else
-  {
-    direction = (float)2000;
-  }
+// float getAS5140_data()
+// {
+//   int rawData = windDirEncoder.read();
+//   bool Status = windDirEncoder.valid();
+//   float direction = 0.0F;
 
-  return direction;
-}
+//   if (Status == true)
+//   {
+//     direction = mapFloat(rawData, 0, 1024, 0, 360);
+//   }
+//   else
+//   {
+//     direction = (float)2000;
+//   }
+
+//   return direction;
+// }
 
 int64_t newLocalTime()
 {
@@ -273,30 +274,30 @@ Imu prepareIMUData()
   return imuData;
 }
 
-Wind prepareWindData()
-{
-  Wind windData = Wind_init_zero;
+// Wind prepareWindData()
+// {
+//   Wind windData = Wind_init_zero;
 
-  windData.time = newLocalTime();
+//   windData.time = newLocalTime();
 
-  MedFilter.in(analogRead(AnalogPin));
-  int rawSensorData = MedFilter.out();
-  // map the raw sensor data to the voltage between 0.0 to 3.0
-  float sensorValue = mapFloat(float(rawSensorData), 6.0, 1024.0, 0.0, 1.0);
-  /* 
-     * convert the voltage to wind speed 
-     * calibration refrence 
-     * https://thepihut.com/products/adafruit-anemometer-wind-speed-sensor-w-analog-voltage-output
-    */
-  float measuredSpeed = mapFloat(sensorValue, minVoltage, maxVoltage, minSpeed, maxSpeed);
-  // Serial.print("wind speed : \t");
-  // Serial.println(measuredSpeed);
+//   MedFilter.in(analogRead(AnalogPin));
+//   int rawSensorData = MedFilter.out();
+//   // map the raw sensor data to the voltage between 0.0 to 3.0
+//   float sensorValue = mapFloat(float(rawSensorData), 6.0, 1024.0, 0.0, 1.0);
+//   /* 
+//      * convert the voltage to wind speed 
+//      * calibration refrence 
+//      * https://thepihut.com/products/adafruit-anemometer-wind-speed-sensor-w-analog-voltage-output
+//     */
+//   float measuredSpeed = mapFloat(sensorValue, minVoltage, maxVoltage, minSpeed, maxSpeed);
+//   // Serial.print("wind speed : \t");
+//   // Serial.println(measuredSpeed);
 
-  windData.speed = 0; //measuredSpeed;
-  windData.direction = 0; //getAS5140_data();
+//   windData.speed = 0; //measuredSpeed;
+//   windData.direction = 0; //getAS5140_data();
 
-  return windData;
-}
+//   return windData;
+// }
 
 Speed prepareRPMData(bool readFromVesc=true)
 {
@@ -459,7 +460,7 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
       }
       case sendWind:
       {
-        Wind windData = prepareWindData();
+        Wind windData = windSensor.prepareData(newLocalTime());
         protobufBridge.sendWind(windData);
         break;
       }
@@ -571,6 +572,8 @@ void setup()
 
   getTime();
 
+  windSensor.setupWindDirEncoder();
+
   // setupAS5140();
   // setupIMU();
   setupMotor();
@@ -599,7 +602,7 @@ void loop()
     }
     readAndSetRPMByTCP(client);
 
-    sendDataAtFrequency(sendWind, t0_Wind, uploadFrequencyWind);
+    sendDataAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
 
     // sendDataAtFrequency(sendImu, t0_IMU, uploadFrequencyIMU);
     // sendDataAtFrequency(sendRPM, t0_RPM, uploadFrequencyRPM);
