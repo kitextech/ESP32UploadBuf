@@ -6,18 +6,18 @@ PowerSensor::PowerSensor(uint8_t numSamples, uint8_t voltagePin, uint8_t current
   // : numSamples(numSamples), voltagePin(voltagePin), currentPin(currentPin), b1(b1), m1(m1), b2(b2), m2(m2), bV(bV), mV(mV), bC(bC), mC(mC), uploadFrequency(uploadFrequency)
 {
   Serial.println("Created a power sensor");
-  // numSamples = numSamples;
-  // voltagePin = voltagePin;
-  // currentPin = currentPin;
-  // b1 = b1;
-  // m1 = m1;
-  // b2 = b2;
-  // m2 = m2;
-  // bV = bV;
-  // mV = mV;
-  // bC = bC;
-  // mC = mC;
-  // uploadFrequency = uploadFrequency;
+  numSamples = numSamples;
+  voltagePin = voltagePin;
+  currentPin = currentPin;
+  b1 = b1;
+  m1 = m1;
+  b2 = b2;
+  m2 = m2;
+  bV = bV;
+  mV = mV;
+  bC = bC;
+  mC = mC;
+  uploadFrequency = uploadFrequency;
   t0 = millis();
 }
 
