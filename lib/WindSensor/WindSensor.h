@@ -8,25 +8,25 @@
 
 class WindSensor
 {
-  public:
-    WindSensor(int analogPin, int voltDivRatio, float voltMin, float voltMax, float speedMin, float speedMax, int updateFreq);
-    void setupWindDirEncoder();
-    Wind prepareData(int64_t time);
-    
-    int t0;
-    uint16_t uploadFrequency;
+public:
+  WindSensor(int ADC_pin, int voltDivRatio, float vMin, float vMax, float SpeedMin, float SpeedMax, int Freq);
+  void setupWindDirEncoder();
+  Wind prepareData(int64_t time);
 
-  private:
-    MedianFilter medFilter{1, 0};
-    AS5040 windDirEncoder{14, 15, 12, 13};
+  int t0;
+  uint16_t uploadFrequency;
 
-    float mapFloat(float value, float in_min, float in_max, float out_min, float out_max);
-    float windDirection();
+private:
+  MedianFilter medFilter{1, 0};
+  AS5040 windDirEncoder{14, 15, 12, 13};
 
-    int analogPin;
-    float voltMin;
-    float voltMax;
-    float speedMin;
-    float speedMax;
+  float mapFloat(float value, float in_min, float in_max, float out_min, float out_max);
+  float windDirection();
+
+  int analogPin;
+  float voltMin;
+  float voltMax;
+  float speedMin;
+  float speedMax;
 };
 #endif

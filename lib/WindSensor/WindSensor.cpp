@@ -1,10 +1,14 @@
 #include "WindSensor.h"
 
-WindSensor::WindSensor(int analogPin, int voltDivRatio, float voltMin, float voltMax, float speedMin, float speedMax, int updateFreq)
+WindSensor::WindSensor(int ADC_pin, int voltDivRatio, float vMin, float vMax, float SpeedMin, float SpeedMax, int Freq)
 {
   t0 = millis();
-  voltMin = voltMin / voltDivRatio;
-  voltMax = voltMax / voltDivRatio;
+  voltMin = vMin / voltDivRatio;
+  voltMax = vMax / voltDivRatio;
+  analogPin = ADC_pin;
+  speedMin = SpeedMin;
+  speedMax = SpeedMax;
+  uploadFrequency = Freq;
   // analogPin = analogPin;
   Serial.println("Created a Wind sensor");
 }
@@ -51,6 +55,7 @@ Wind WindSensor::prepareData(int64_t time)
   windData.time = time;
 
   medFilter.in(analogRead(analogPin));
+  Serial.println(analogPin);
   int rawSensorData = medFilter.out();
   // map the raw sensor data to the voltage between 0.0 to 3.0
   float sensorValue = mapFloat(float(rawSensorData), 6.0, 1024.0, 0.0, 1.0);

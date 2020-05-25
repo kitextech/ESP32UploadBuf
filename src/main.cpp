@@ -45,7 +45,7 @@ WindSensor windSensor(A0, 2, 0.4, 2, 0.2, 32.4, 3);
 // #define SendKey 0 // Probably not needed (TCP)
 
 // WiFi and server
-const char *ssid = "kitexField";
+const char *ssid = "kitex";
 const char *password = "morepower";
 // const char *addr = "192.168.8.144"; // Local IP of the black-pearl pi
 const char *addr = "192.168.8.101"; // Local IP of office laptop
@@ -54,7 +54,7 @@ const char *addr = "192.168.8.101"; // Local IP of office laptop
 int tcpPort = 8888;
 WiFiServer server(tcpPort);
 WiFiClient client = server.available();
-uint8_t bufferTCP[128] = { 0 };
+uint8_t bufferTCP[128] = {0};
 
 // VESC control
 HardwareSerial SerialVesc(2);
@@ -155,7 +155,6 @@ int adc_samples[NUMSAMPLES];
 // float b_C = -1.866;
 // float m_C = 28.6856;
 
-
 // Define the LED pin - different for different ESP's
 // #define LED_PIN LED_BUILTIN // For normal Arduino, possibly other ESP's
 #define LED_PIN 0
@@ -164,7 +163,6 @@ ICACHE_RAM_ATTR void magnet_detect() // This function is called whenever a magne
 {
   detection++;
 }
-
 
 enum SendDataType
 {
@@ -270,7 +268,7 @@ Imu prepareIMUData()
   imuData.orientation.y = quat.y();
   imuData.orientation.z = quat.z();
   imuData.orientation.w = quat.w();
-  
+
   return imuData;
 }
 
@@ -284,9 +282,9 @@ Imu prepareIMUData()
 //   int rawSensorData = MedFilter.out();
 //   // map the raw sensor data to the voltage between 0.0 to 3.0
 //   float sensorValue = mapFloat(float(rawSensorData), 6.0, 1024.0, 0.0, 1.0);
-//   /* 
-//      * convert the voltage to wind speed 
-//      * calibration refrence 
+//   /*
+//      * convert the voltage to wind speed
+//      * calibration refrence
 //      * https://thepihut.com/products/adafruit-anemometer-wind-speed-sensor-w-analog-voltage-output
 //     */
 //   float measuredSpeed = mapFloat(sensorValue, minVoltage, maxVoltage, minSpeed, maxSpeed);
@@ -299,11 +297,11 @@ Imu prepareIMUData()
 //   return windData;
 // }
 
-Speed prepareRPMData(bool readFromVesc=true)
+Speed prepareRPMData(bool readFromVesc = true)
 {
   Speed rpmData = Speed_init_zero;
   rpmData.time = newLocalTime();
-  
+
   if (readFromVesc)
   {
     if (vesc.getVescValues())
@@ -315,7 +313,6 @@ Speed prepareRPMData(bool readFromVesc=true)
     {
       return rpmData;
     }
-    
   }
   else
   {
@@ -399,7 +396,7 @@ Temperature prepareTemperatureData()
 //     voltage_adc = voltage_adc * m1 + b1;
 //   else if (voltage_adc >= 2.6)
 //     voltage_adc = voltage_adc * m2 + b2;
-  
+
 //   if (current_adc > 0 && current_adc < 2.6)
 //     current_adc = current_adc * m1 + b1;
 //   else if (current_adc >= 2.6)
@@ -438,40 +435,40 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
   if (int(millis()) - t0 >= (1000 / uploadFrequency))
   {
     t0 = millis();
-    switch(sendDataType)
+    switch (sendDataType)
     {
-      case sendRPM:
-      {
-        Speed rpmData = prepareRPMData(true);
-        protobufBridge.sendSpeed(rpmData);
-        break;
-      }
-      case sendImu:
-      {
-        Imu imuData = prepareIMUData();
-        protobufBridge.sendIMU(imuData);
-        break;
-      }
-      case sendTemperature:
-      {
-        Temperature temperatureData = prepareTemperatureData();
-        protobufBridge.sendTemperature(temperatureData);
-        break;
-      }
-      case sendWind:
-      {
-        Wind windData = windSensor.prepareData(newLocalTime());
-        protobufBridge.sendWind(windData);
-        break;
-      }
-      case sendPower:
-      {
-        Power powerData = powerSensor.prepareData(newLocalTime());
-        protobufBridge.sendPower(powerData);
-        break;
-      }
-      default:
-        break;
+    case sendRPM:
+    {
+      Speed rpmData = prepareRPMData(true);
+      protobufBridge.sendSpeed(rpmData);
+      break;
+    }
+    case sendImu:
+    {
+      Imu imuData = prepareIMUData();
+      protobufBridge.sendIMU(imuData);
+      break;
+    }
+    case sendTemperature:
+    {
+      Temperature temperatureData = prepareTemperatureData();
+      protobufBridge.sendTemperature(temperatureData);
+      break;
+    }
+    case sendWind:
+    {
+      Wind windData = windSensor.prepareData(newLocalTime());
+      protobufBridge.sendWind(windData);
+      break;
+    }
+    case sendPower:
+    {
+      Power powerData = powerSensor.prepareData(newLocalTime());
+      protobufBridge.sendPower(powerData);
+      break;
+    }
+    default:
+      break;
     }
     udp.beginPacket(insertServerIP, udpPortRemoteInsert);
     udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
@@ -489,7 +486,8 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
 
 void readAndSetRPMByTCP(WiFiClient client)
 {
-  if (client) {
+  if (client)
+  {
     while (client.connected())
     {
       if (client.available() > 0)
@@ -502,12 +500,12 @@ void readAndSetRPMByTCP(WiFiClient client)
 
         client.read(bufferTCP, bufferTCP[0]);
         Speed message = Speed_init_zero;
-        pb_istream_t stream = pb_istream_from_buffer(bufferTCP, msg_length);        
+        pb_istream_t stream = pb_istream_from_buffer(bufferTCP, msg_length);
         bool status = pb_decode(&stream, Speed_fields, &message);
-        
+
         if (!status)
         {
-            Serial.printf("Decoding failed: %s\n", PB_GET_ERROR(&stream));
+          Serial.printf("Decoding failed: %s\n", PB_GET_ERROR(&stream));
         }
         else
         {
@@ -522,13 +520,16 @@ void readAndSetRPMByTCP(WiFiClient client)
 
 void setup()
 {
-  Serial.begin(115200);   // USB to computer
+  Serial.begin(115200); // USB to computer
   Serial.setDebugOutput(true);
-  while (!Serial) {;}
+  while (!Serial)
+  {
+    ;
+  }
 
   // Setup serial / UART1 for the vesc
   SerialVesc.begin(115200, SERIAL_8N1, 16, 17);
-  vesc.setSerialPort( & SerialVesc);
+  vesc.setSerialPort(&SerialVesc);
 
   // Serial1.begin(115200);  // rx/tx pins of ESP32 (for the vesc)
   // vesc.setSerialPort(&Serial1);
@@ -543,8 +544,8 @@ void setup()
   Serial.print("Connecting to ");
   Serial.println(ssid);
 
-  WiFi.mode(WIFI_STA);  // Necessary?
-    WiFi.begin(ssid, password);
+  WiFi.mode(WIFI_STA); // Necessary?
+  WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED)
   {
@@ -560,9 +561,6 @@ void setup()
   // client = server.available();
 
   WiFi.hostByName(addr, insertServerIP); // Define IPAddress object with the ip address string
-
-  
-
 
   // NTC
   // connect to udp_time
@@ -589,8 +587,8 @@ void loop()
     delay(5000);
   }
   else
-  { 
-    if (!(uint32_t(millis()) % (secondsUntilNewTime*1000)))
+  {
+    if (!(uint32_t(millis()) % (secondsUntilNewTime * 1000)))
     {
       sysTimeAtBaseTime = int64_t(millis());
       getTime();
@@ -600,13 +598,13 @@ void loop()
     {
       client = server.available();
     }
-    readAndSetRPMByTCP(client);
+    // readAndSetRPMByTCP(client);
 
     sendDataAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
 
     // sendDataAtFrequency(sendImu, t0_IMU, uploadFrequencyIMU);
     // sendDataAtFrequency(sendRPM, t0_RPM, uploadFrequencyRPM);
     // sendDataAtFrequency(sendTemperature, t0_temp, uploadFrequencyTemp);
-    sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
+    // sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
   }
 }
