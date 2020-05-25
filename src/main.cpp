@@ -13,8 +13,8 @@ Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/R
 #include <WiFi.h>
 // #include <WiFiUdp.h> // NTC
 #include <TimeSync.h>
-#include <Adafruit_Sensor.h> // BNO-055
-#include <Adafruit_BNO055.h> // BNO-055
+// #include <Adafruit_Sensor.h> // BNO-055
+// #include <Adafruit_BNO055.h> // BNO-055
 #include <ProtobufBridge.h>
 #include <MedianFilter.h>
 #include <AS5040.h> // wind vane
@@ -37,10 +37,12 @@ Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/R
 // Sensor include statements
 #include <PowerSensor.h>
 #include <WindSensor.h>
+#include <ImuSensor.h>
 
 // Create desired sensors
 PowerSensor powerSensor(50, A2, A3, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1);
 WindSensor windSensor(A2, 2, 0.4F, 2.0F, 0.2F, 32.4F, 3);
+ImuSensor imuSensor;
 
 // #define SendKey 0 // Probably not needed (TCP)
 
@@ -65,24 +67,24 @@ int t0_Vesc = millis();
 // Time
 IPAddress timeServerIP;
 unsigned int udpPortLocal = 2390;
-
 TimeSync timeSync;
 int64_t baseTime;
 int64_t sysTimeAtBaseTime;
 const uint32_t secondsUntilNewTime = 300;
 
 // Upload
-int uploadFrequencyIMU = 5;
-// int uploadFrequencyWind = 3;
 int uploadFrequencyRPM = 2;
 int uploadFrequencyTemp = 1;
-// int uploadFrequencyPower = 1;
-int t0_IMU = millis();
-// int t0_Wind = millis();
 int t0_Motor = millis();
 int t0_RPM = millis();
 int t0_temp = millis();
+
+// int uploadFrequencyIMU = 5;
+// int uploadFrequencyPower = 1;
+// int uploadFrequencyWind = 3;
+// int t0_IMU = millis();
 // int t0_power = millis();
+// int t0_Wind = millis();
 
 IPAddress insertServerIP;
 unsigned int udpPortRemoteInsert = 10102;
@@ -91,9 +93,9 @@ WiFiUDP udp;
 
 ProtobufBridge protobufBridge;
 
-// BNO-055
-#define BNO055_SAMPLERATE_DELAY_MS (10)
-Adafruit_BNO055 bno = Adafruit_BNO055(-1, 0x28);
+// // BNO-055
+// #define BNO055_SAMPLERATE_DELAY_MS (10)
+// Adafruit_BNO055 bno = Adafruit_BNO055(-1, 0x28);
 
 // // Wind direction
 // AS5040 windDirEncoder(14, 15, 12, 13);
@@ -174,32 +176,32 @@ enum SendDataType
   sendWind
 };
 
-float mapFloat(float value, float in_min, float in_max, float out_min, float out_max)
-{
-  return (value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
+// float mapFloat(float value, float in_min, float in_max, float out_min, float out_max)
+// {
+//   return (value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+// }
 
-void setupIMU()
-{ // BNO-055 SETUP
-  Serial.println("Orientation Sensor Raw Data Test");
-  Serial.println("");
-  if (!bno.begin())
-  {
-    /* There was a problem detecting the BNO055 ... check your connections */
-    Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
-    while (1)
-      ;
-  }
-  delay(1000);
-  /* Display the current temperature */
-  int8_t temp = bno.getTemp();
-  Serial.print("Current Temperature: ");
-  Serial.print(temp);
-  Serial.println(" C");
-  Serial.println("");
-  bno.setExtCrystalUse(true);
-  Serial.println("Calibration status values: 0=uncalibrated, 3=fully calibrated");
-}
+// void setupIMU()
+// { // BNO-055 SETUP
+//   Serial.println("Orientation Sensor Raw Data Test");
+//   Serial.println("");
+//   if (!bno.begin())
+//   {
+//     /* There was a problem detecting the BNO055 ... check your connections */
+//     Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+//     while (1)
+//       ;
+//   }
+//   delay(1000);
+//   /* Display the current temperature */
+//   int8_t temp = bno.getTemp();
+//   Serial.print("Current Temperature: ");
+//   Serial.print(temp);
+//   Serial.println(" C");
+//   Serial.println("");
+//   bno.setExtCrystalUse(true);
+//   Serial.println("Calibration status values: 0=uncalibrated, 3=fully calibrated");
+// }
 
 // void setupAS5140()
 // {
@@ -243,34 +245,34 @@ void setupMotor()
   attachInterrupt(digitalPinToInterrupt(HALL), magnet_detect, RISING); // Initialize the intterrupt pin
 }
 
-Imu prepareIMUData()
-{
-  Imu imuData = Imu_init_zero;
+// Imu prepareIMUData()
+// {
+//   Imu imuData = Imu_init_zero;
 
-  imuData.time = newLocalTime();
+//   imuData.time = newLocalTime();
 
-  imu::Vector<3> acc = bno.getVector(Adafruit_BNO055::VECTOR_LINEARACCEL);
-  imu::Vector<3> gyro = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
-  imu::Quaternion quat = bno.getQuat();
+//   imu::Vector<3> acc = bno.getVector(Adafruit_BNO055::VECTOR_LINEARACCEL);
+//   imu::Vector<3> gyro = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+//   imu::Quaternion quat = bno.getQuat();
 
-  imuData.has_acc = true;
-  imuData.acc.x = acc.x();
-  imuData.acc.y = acc.y();
-  imuData.acc.z = acc.z();
+//   imuData.has_acc = true;
+//   imuData.acc.x = acc.x();
+//   imuData.acc.y = acc.y();
+//   imuData.acc.z = acc.z();
 
-  imuData.has_gyro = true;
-  imuData.gyro.x = gyro[0];
-  imuData.gyro.y = gyro.y();
-  imuData.gyro.z = gyro.z();
+//   imuData.has_gyro = true;
+//   imuData.gyro.x = gyro[0];
+//   imuData.gyro.y = gyro.y();
+//   imuData.gyro.z = gyro.z();
 
-  imuData.has_orientation = true;
-  imuData.orientation.x = quat.x();
-  imuData.orientation.y = quat.y();
-  imuData.orientation.z = quat.z();
-  imuData.orientation.w = quat.w();
+//   imuData.has_orientation = true;
+//   imuData.orientation.x = quat.x();
+//   imuData.orientation.y = quat.y();
+//   imuData.orientation.z = quat.z();
+//   imuData.orientation.w = quat.w();
 
-  return imuData;
-}
+//   return imuData;
+// }
 
 // Wind prepareWindData()
 // {
@@ -445,7 +447,7 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
     }
     case sendImu:
     {
-      Imu imuData = prepareIMUData();
+      Imu imuData = imuSensor.prepareData(newLocalTime());
       protobufBridge.sendIMU(imuData);
       break;
     }
@@ -571,10 +573,10 @@ void setup()
   getTime();
 
   windSensor.setupWindDirEncoder();
+  imuSensor.setup();
 
   // setupAS5140();
-  // setupIMU();
-  setupMotor();
+  // setupMotor();
 }
 
 void loop()
