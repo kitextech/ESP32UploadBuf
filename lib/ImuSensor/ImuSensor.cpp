@@ -1,5 +1,12 @@
 #include "ImuSensor.h"
 
+ImuSensor::ImuSensor(int uploadFreq)
+{
+  uploadFrequency = uploadFreq;
+  t0 = millis();
+  Serial.println("Created an IMU sensor handling object");
+}
+
 void ImuSensor::setup()
 { // BNO-055 SETUP
   Serial.println("Orientation Sensor Raw Data Test");

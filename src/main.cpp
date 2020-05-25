@@ -1,23 +1,8 @@
-/*
-RPM part is based on Arduino Hall Effect Sensor Project by Arvind Sanjeev
-Link: http://diyhacking.com
-Temperature part is based on Adafruit Learning System guide on Thermistors by Limor Fried, Adafruit Industries
-Link:  https://learn.adafruit.com/thermistor/overview
-
-Both modified by Bertalan Kovács (bertalan@kitex.tech)
-Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/README.md
-*/
-
 #include <Arduino.h>
 #include <iostream>
 #include <WiFi.h>
-// #include <WiFiUdp.h> // NTC
 #include <TimeSync.h>
-// #include <Adafruit_Sensor.h> // BNO-055
-// #include <Adafruit_BNO055.h> // BNO-055
 #include <ProtobufBridge.h>
-#include <MedianFilter.h>
-#include <AS5040.h> // wind vane
 
 #include <HardwareSerial.h>
 #include <VescUart.h>
@@ -27,22 +12,50 @@ Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/R
 #include "./pb_decode.h"
 #include "schema.pb.h"
 
-/*
- * AS5040.h          -> library for reading data through SSI protocol from AS5140 magnetic sensor
- * MedianFilter.h    -> library for filtering the noisy recieved analog data
- * ESP8266WiFi.h     -> library for handling modularity of wifi on ESP8266 
- * WiFiUdp.h         -> library for reading time by UDP protocol from NTP server
- */
+// Sensor include statements
+// #include <sensors.h>
+// #if IMU
+//   #include <ImuSensor.h>
+// #endif
+
+// #include <PowerSensor.h>
+// #include <WindSensor.h>
+// #include <ImuSensor.h>
+// #include <HallSensor.h>
 
 // Sensor include statements
-#include <PowerSensor.h>
-#include <WindSensor.h>
-#include <ImuSensor.h>
+#define IMU 0
+#define WIND 0
+#define POWER 0
+#define HALL 0
 
-// Create desired sensors
-PowerSensor powerSensor(50, A2, A3, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1);
-WindSensor windSensor(A0, 2, 0.4, 2, 0.2, 32.4, 3);
-ImuSensor imuSensor;
+#if IMU
+  #include <ImuSensor.h>
+  ImuSensor imuSensor(5);
+#endif
+#if WIND
+  #include <WindSensor.h>
+  WindSensor windSensor(A0, 2, 0.4, 2, 0.2, 32.4, 3);
+#endif
+#if POWER
+  #include <PowerSensor.h>
+  PowerSensor powerSensor(50, A2, A3, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1);
+#endif
+#if HALL
+  #include <HallSensor.h>
+  HallSensor hallSensor(2);
+#endif
+
+enum ServerName
+{
+  blackPearl,
+  laptopAndreas,
+  laptopOffice
+};
+
+#define SERVERNAME blackPearl
+
+
 
 // #define SendKey 0 // Probably not needed (TCP)
 
@@ -51,6 +64,13 @@ const char *ssid = "kitex";
 const char *password = "morepower";
 // const char *addr = "192.168.8.144"; // Local IP of the black-pearl pi
 const char *addr = "192.168.8.101"; // Local IP of office laptop
+
+// #if SERVERNAME == blackPearl
+//   const char *addr = "192.168.8.144";
+// #endif
+// #if SERVERNAME == laptopAndreas
+//   const char *addr = "192.168.8.106";
+// #endif
 
 // TCP
 int tcpPort = 8888;
@@ -73,15 +93,16 @@ int64_t sysTimeAtBaseTime;
 const uint32_t secondsUntilNewTime = 300;
 
 // Upload
-int uploadFrequencyRPM = 2;
+
 int uploadFrequencyTemp = 1;
 int t0_Motor = millis();
-int t0_RPM = millis();
 int t0_temp = millis();
 
+// int uploadFrequencyRPM = 2;
 // int uploadFrequencyIMU = 5;
 // int uploadFrequencyPower = 1;
 // int uploadFrequencyWind = 3;
+// int t0_RPM = millis();
 // int t0_IMU = millis();
 // int t0_power = millis();
 // int t0_Wind = millis();
@@ -113,8 +134,8 @@ ProtobufBridge protobufBridge;
 
 //// Motor measurements (RPM + temperature)
 // Hall sensor settings
-#define HALL 2          // D4 pin on ESP8266 NodeMCU for one hall sensor connection
-#define POLE_PAIR_NUM 7 // 14 poles -> 7 pole pairs, counted manually
+// #define PIN_HALL 2          // D4 pin on ESP8266 NodeMCU for one hall sensor connection
+// #define POLE_PAIR_NUM 7 // 14 poles -> 7 pole pairs, counted manually
 
 // Teperature settings
 #define THERMISTORPIN A0        // which analog pin to connect
@@ -166,16 +187,6 @@ ICACHE_RAM_ATTR void magnet_detect() // This function is called whenever a magne
 {
   detection++;
 }
-
-enum SendDataType
-{
-  sendRPM,
-  sendForce,
-  sendPower,
-  sendImu,
-  sendTemperature,
-  sendWind
-};
 
 // float mapFloat(float value, float in_min, float in_max, float out_min, float out_max)
 // {
@@ -242,7 +253,7 @@ int64_t newLocalTime()
 
 void setupMotor()
 {
-  pinMode(HALL, INPUT_PULLUP);                                         // Pulling up the pin (equivalent of using the 10kOhm resistance on the board)
+  pinMode(PIN_HALL, INPUT_PULLUP);                                         // Pulling up the pin (equivalent of using the 10kOhm resistance on the board)
   attachInterrupt(digitalPinToInterrupt(HALL), magnet_detect, RISING); // Initialize the intterrupt pin
 }
 
@@ -434,6 +445,16 @@ void getTime()
   sysTimeAtBaseTime = int64_t(millis());
 }
 
+enum SendDataType
+{
+  sendRPM,
+  sendForce,
+  sendPower,
+  sendImu,
+  sendTemperature,
+  sendWind
+};
+
 void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency)
 {
   if (int(millis()) - t0 >= (1000 / uploadFrequency))
@@ -443,14 +464,18 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
     {
     case sendRPM:
     {
-      Speed rpmData = prepareRPMData(true);
-      protobufBridge.sendSpeed(rpmData);
+      #if HALL
+        Speed rpmData = prepareRPMData(true);
+        protobufBridge.sendSpeed(rpmData);
+      #endif
       break;
     }
     case sendImu:
     {
-      Imu imuData = imuSensor.prepareData(newLocalTime());
-      protobufBridge.sendIMU(imuData);
+      #if IMU
+        Imu imuData = imuSensor.prepareData(newLocalTime());
+        protobufBridge.sendIMU(imuData);
+      #endif
       break;
     }
     case sendTemperature:
@@ -461,14 +486,18 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
     }
     case sendWind:
     {
-      Wind windData = windSensor.prepareData(newLocalTime());
-      protobufBridge.sendWind(windData);
+      #if WIND
+        Wind windData = windSensor.prepareData(newLocalTime());
+        protobufBridge.sendWind(windData);
+      #endif
       break;
     }
     case sendPower:
     {
-      Power powerData = powerSensor.prepareData(newLocalTime());
-      protobufBridge.sendPower(powerData);
+      #if POWER
+        Power powerData = powerSensor.prepareData(newLocalTime());
+        protobufBridge.sendPower(powerData);
+      #endif
       break;
     }
     default:
@@ -574,10 +603,14 @@ void setup()
 
   getTime();
 
-  windSensor.setupWindDirEncoder();
-  imuSensor.setup();
+  #if WIND
+    windSensor.setupWindDirEncoder();
+  #endif
+  #if IMU
+    imuSensor.setup();
+  #endif
 
-  // setupAS5140();
+
   // setupMotor();
 }
 
@@ -604,11 +637,20 @@ void loop()
     }
     // readAndSetRPMByTCP(client);
 
-    sendDataAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
-
-    // sendDataAtFrequency(sendImu, t0_IMU, uploadFrequencyIMU);
+    #if WIND
+      sendDataAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
+    #endif
+    #if IMU
+      sendDataAtFrequency(sendImu, imuSensor.t0, imuSensor.t0);
+    #endif
+    #if POWER
+      sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
+    #endif
+    #if HALL
+      sendDataAtFrequency(sendRPM, hallSensor.t0, hallSensor.uploadFrequency);      
+    #endif
     // sendDataAtFrequency(sendRPM, t0_RPM, uploadFrequencyRPM);
     // sendDataAtFrequency(sendTemperature, t0_temp, uploadFrequencyTemp);
-    // sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
+
   }
 }
