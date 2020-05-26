@@ -28,6 +28,7 @@ TimeSync timeSync;
 int64_t baseTime;
 int64_t sysTimeAtBaseTime;
 const uint32_t secondsUntilNewTime = 300;
+
 IPAddress insertServerIP;
 unsigned int udpPortRemoteInsert = 10102;
 WiFiUDP udp;
