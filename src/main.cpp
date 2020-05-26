@@ -1,69 +1,3 @@
-// #include <Arduino.h>
-// #include <iostream>
-// #include <WiFi.h>
-// #include <TimeSync.h>
-// #include <ProtobufBridge.h>
-
-// #include <stdio.h>
-// #include "./pb_encode.h"
-// #include "./pb_decode.h"
-// #include "schema.pb.h"
-
-// #define LED_PIN 0
-
-// // Sensor and vesc include statements
-// #define IMU 0
-// #define WIND 0
-// #define POWER 0
-// #define RPM_HALL 0
-// #define TEMPERATURE 0
-
-// #define HAS_VESC 1
-
-// #if IMU
-//   #include <ImuSensor.h>
-//   ImuSensor imuSensor(5);
-// #endif
-// #if WIND
-//   #include <WindSensor.h>
-//   WindSensor windSensor(A0, 2, 0.4, 2, 0.2, 32.4, 3);
-// #endif
-// #if POWER
-//   #include <PowerSensor.h>
-//   PowerSensor powerSensor(50, A2, A3, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1);
-// #endif
-// #if RPM_HALL
-//   #include <HallSensor.h>
-//   HallSensor hallSensor(2, 7, 2);
-// #endif
-// #if TEMPERATURE
-//   #include <TemperatureSensor.h>
-//   TemperatureSensor temperatureSensor(1, A0, 10000, 25, 3950, 10000);
-// #endif
-
-// #if HAS_VESC
-//   #include <VescStuff.cpp>
-//   #include <HardwareSerial.h>
-//   #include <VescUart.h>
-
-//   HardwareSerial SerialVesc(2);
-//   VescUart vesc;
-//   int updateFrequencyVesc = 20;
-//   int t0_Vesc = millis();
-
-//   int tcpPort = 8888;
-//   WiFiServer server(tcpPort);
-//   WiFiClient client = server.available();
-//   uint8_t bufferTCP[128] = {0};
-// #endif
-
-// // WiFi
-// const char *ssid = "kitex"; // use kitexField
-// const char *password = "morepower";
-// // const char *addr = "192.168.8.144"; // black-pearl pi
-// const char *addr = "192.168.8.101"; // Office laptop (make static if not already...)
-// // const char *addr = "192.168.8.106"; // Andreas laptop
-
 #include "init.h"
 
 #if IMU
@@ -85,22 +19,6 @@
 #if TEMPERATURE
   #include <TemperatureSensor.h>
   TemperatureSensor temperatureSensor(1, A0, 10000, 25, 3950, 10000);
-#endif
-
-#if HAS_VESC
-  #include <VescStuff.cpp>
-  #include <HardwareSerial.h>
-  #include <VescUart.h>
-
-  HardwareSerial SerialVesc(2);
-  VescUart vesc;
-  int updateFrequencyVesc = 20;
-  int t0_Vesc = millis();
-
-  int tcpPort = 8888;
-  WiFiServer server(tcpPort);
-  WiFiClient client = server.available();
-  uint8_t bufferTCP[128] = {0};
 #endif
 
 // Time and udp setup
@@ -128,6 +46,21 @@ int64_t newLocalTime()
 }
 
 #if HAS_VESC
+#include <VescStuff.cpp>
+#include <HardwareSerial.h>
+#include <VescUart.h>
+
+HardwareSerial SerialVesc(2);
+VescUart vesc;
+int updateFrequencyVesc = 20;
+int t0_Vesc = millis();
+int uploadFreqVesc = 5;
+
+int tcpPort = 8888;
+WiFiServer server(tcpPort);
+WiFiClient client = server.available();
+uint8_t bufferTCP[128] = {0};
+
 Speed prepareRpmVesc()
 {
   Speed rpmData = Speed_init_zero;
@@ -144,6 +77,28 @@ Power preparePowerVesc()
   powerData.voltage = vesc.data.inpVoltage;
   return powerData;
 }
+
+void sendVescDataAtFrequency()
+{
+  if (int(millis()) - t0_Vesc >= (1000 / uploadFreqVesc))
+  {
+    vesc.getVescValues();
+    Speed rpmData = prepareRpmVesc();
+    Power powerData = preparePowerVesc();
+
+    protobufBridge.sendSpeed(rpmData);
+    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+    udp.endPacket();
+
+    protobufBridge.sendPower(powerData);
+    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+    udp.endPacket();
+
+    t0_Vesc = millis();
+  }
+}
 #endif
 
 enum SendDataType
@@ -153,7 +108,8 @@ enum SendDataType
   sendPower,
   sendImu,
   sendTemperature,
-  sendWind
+  sendWind,
+  sendVesc
 };
 
 void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency)
@@ -202,6 +158,13 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
       #endif
       break;
     }
+    // case sendVesc:
+    // {
+    //   #if HAS_VESC
+    //     Speed prepareRpmVesc(newLocalTime());
+    //   #endif
+    //   break;
+    // }
     default:
       break;
     }
@@ -268,10 +231,9 @@ void setup()
   #if HAS_VESC
   SerialVesc.begin(115200, SERIAL_8N1, 16, 17);
   vesc.setSerialPort(&SerialVesc);
-  #endif
-
   // Serial1.begin(115200);  // rx/tx pins of ESP32 (for the vesc)
   // vesc.setSerialPort(&Serial1);
+  #endif
 
   pinMode(LED_PIN, OUTPUT);
 
@@ -295,9 +257,11 @@ void setup()
   Serial.printf("\nWiFi connected. IP address: ");
   Serial.println(WiFi.localIP());
 
+  #if HAS_VESC
   server.begin(); // TCP
   // delay(1000);
   // client = server.available();
+  #endif
 
   WiFi.hostByName(addr, insertServerIP); // Define IPAddress object with the ip address string
 
@@ -322,7 +286,7 @@ void setup()
 
 void loop()
 {
-  // digitalWrite(LED_PIN, LOW);
+  digitalWrite(LED_PIN, LOW);
 
   if (WiFi.status() != WL_CONNECTED)
   {
@@ -353,10 +317,6 @@ void loop()
       sendDataAtFrequency(sendTemperature, temperatureSensor.t0, temperatureSensor.uploadFrequency);
     #endif
     #if HAS_VESC
-      vesc.getVescValues(); // Not all the time
-      sendDataAtFrequency(sendRpmVesc, ?);
-      sendDataAtFrequency(sendPowerVesc, ?);
-      
       if (!client.connected()) // client = the TCP client who's going to send us something
       {
         client = server.available();

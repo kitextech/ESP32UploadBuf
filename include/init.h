@@ -12,7 +12,7 @@
 #define LED_PIN 0
 
 // Sensor and vesc include statements
-#define IMU 0
+#define IMU 1
 #define WIND 0
 #define POWER 0
 #define RPM_HALL 0
