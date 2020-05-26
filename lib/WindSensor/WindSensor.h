@@ -11,6 +11,7 @@ class WindSensor
 public:
   WindSensor(uint8_t ADC_pin, int voltDivRatio, float vMin, float vMax, float SpeedMin, float SpeedMax, int Freq);
   void setupWindDirEncoder();
+  
   Wind prepareData(int64_t time);
 
   int t0;

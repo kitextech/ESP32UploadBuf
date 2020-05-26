@@ -1,39 +1,5 @@
 #include "init.h"
 
-#if IMU
-  #include <ImuSensor.h>
-  ImuSensor imuSensor(5);
-#endif
-#if WIND
-  #include <WindSensor.h>
-  WindSensor windSensor(A0, 2, 0.4, 2, 0.2, 32.4, 3);
-#endif
-#if POWER
-  #include <PowerSensor.h>
-  PowerSensor powerSensor(50, A2, A3, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1);
-#endif
-#if RPM_HALL
-  #include <HallSensor.h>
-  HallSensor hallSensor(2, 7, 2);
-#endif
-#if TEMPERATURE
-  #include <TemperatureSensor.h>
-  TemperatureSensor temperatureSensor(1, A0, 10000, 25, 3950, 10000);
-#endif
-
-// Time and udp setup
-IPAddress timeServerIP;
-unsigned int udpPortLocal = 2390;
-TimeSync timeSync;
-int64_t baseTime;
-int64_t sysTimeAtBaseTime;
-const uint32_t secondsUntilNewTime = 300;
-
-IPAddress insertServerIP;
-unsigned int udpPortRemoteInsert = 10102;
-WiFiUDP udp;
-ProtobufBridge protobufBridge;
-
 void getTime()
 {
   Serial.println("I shall now fetch the time!");
@@ -47,21 +13,6 @@ int64_t newLocalTime()
 }
 
 #if HAS_VESC
-#include <VescStuff.cpp>
-#include <HardwareSerial.h>
-#include <VescUart.h>
-
-HardwareSerial SerialVesc(2);
-VescUart vesc;
-int updateFrequencyVesc = 20;
-int t0_Vesc = millis();
-int uploadFreqVesc = 5;
-
-int tcpPort = 8888;
-WiFiServer server(tcpPort);
-WiFiClient client = server.available();
-uint8_t bufferTCP[128] = {0};
-
 Speed prepareRpmVesc()
 {
   Speed rpmData = Speed_init_zero;
@@ -159,13 +110,6 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
       #endif
       break;
     }
-    // case sendVesc:
-    // {
-    //   #if HAS_VESC
-    //     Speed prepareRpmVesc(newLocalTime());
-    //   #endif
-    //   break;
-    // }
     default:
       break;
     }
@@ -296,7 +240,7 @@ void loop()
   }
   else
   {
-    if (!(uint32_t(millis()) % (secondsUntilNewTime * 1000)))
+    if (millis()-sysTimeAtBaseTime >= (secondsUntilNewTime*1000))
     {
       sysTimeAtBaseTime = int64_t(millis());
       getTime();
