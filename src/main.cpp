@@ -1,175 +1,38 @@
-#include <Arduino.h>
-#include <iostream>
-#include <ESP8266WiFi.h>
-#include <WiFiUdp.h> // NTC
-#include <TimeSync.h>
-#include <Adafruit_Sensor.h> // BNO-055
-#include <Adafruit_BNO055.h> // BNO-055
-#include <ProtobufBridge.h>
-#include <MedianFilter.h>
-#include <AS5040.h> // wind vane
+#include "init.h"
 
-/*
- * AS5040.h          -> library for reading data through SSI protocol from AS5140 magnetic sensor
- * MedianFilter.h    -> library for filtering the noisy recieved analog data
- * ESP8266WiFi.h     -> library for handling modularity of wifi on ESP8266 
- * WiFiUdp.h         -> library for reading time by UDP protocol from NTP server
- */
+#if IMU
+  #include <ImuSensor.h>
+  ImuSensor imuSensor(5);
+#endif
+#if WIND
+  #include <WindSensor.h>
+  WindSensor windSensor(A0, 2, 0.4, 2, 0.2, 32.4, 3);
+#endif
+#if POWER
+  #include <PowerSensor.h>
+  PowerSensor powerSensor(50, A2, A3, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1);
+#endif
+#if RPM_HALL
+  #include <HallSensor.h>
+  HallSensor hallSensor(2, 7, 2);
+#endif
+#if TEMPERATURE
+  #include <TemperatureSensor.h>
+  TemperatureSensor temperatureSensor(1, A0, 10000, 25, 3950, 10000);
+#endif
 
-// WiFi and server
-const char *ssid = "kitexField";
-const char *password = "morepower";
-const char *addr = "192.168.8.144"; // Local IP of the black-pearl pi
-// const char *addr = "192.168.8.104"; // Local IP of office laptop
-
-// Time
+// Time and udp setup
 IPAddress timeServerIP;
-WiFiUDP udp_time;
-unsigned int udpPortLocalTime = 2390;
-
+unsigned int udpPortLocal = 2390;
 TimeSync timeSync;
 int64_t baseTime;
 int64_t sysTimeAtBaseTime;
-const int secondsUntilNewTime = 300;
-
-// Upload
-int uploadFrequency = 2; // Hz
-int t0 = millis();
+const uint32_t secondsUntilNewTime = 300;
 
 IPAddress insertServerIP;
-WiFiUDP udp_insert;
 unsigned int udpPortRemoteInsert = 10102;
-
+WiFiUDP udp;
 ProtobufBridge protobufBridge;
-
-// BNO-055
-#define BNO055_SAMPLERATE_DELAY_MS (10)
-Adafruit_BNO055 bno = Adafruit_BNO055(-1, 0x28);
-
-// Wind direction (AS5140-H)
-const int CSpin = 15;
-const int CLKpin = 14;
-const int DOpin = 12;
-const int PROGpin = 13;
-AS5040 encoder(CLKpin, CSpin, DOpin, PROGpin);
-
-// Wind speed (analog read)
-const int AnalogPin = A0;
-const int VoltdivRatio = 2;
-const float minVoltage = 0.4 / VoltdivRatio;
-const float maxVoltage = 2.0 / VoltdivRatio;
-const float minSpeed = 0.2;
-const float maxSpeed = 32.4;
-const int updateFreq = 5;
-MedianFilter MedFilter(1, 0);
-
-// Define the LED pin - different for different ESP's
-// #define LED_PIN LED_BUILTIN // For normal Arduino, possibly other ESP's
-#define LED_PIN 0
-
-float mapFloat(float value, float in_min, float in_max, float out_min, float out_max)
-{
-  return (value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
-void setupIMU()
-{ // BNO-055 SETUP
-  Serial.println("Orientation Sensor Raw Data Test");
-  Serial.println("");
-  if (!bno.begin())
-  {
-    /* There was a problem detecting the BNO055 ... check your connections */
-    Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
-    while (1)
-      ;
-  }
-  delay(1000);
-  /* Display the current temperature */
-  int8_t temp = bno.getTemp();
-  Serial.print("Current Temperature: ");
-  Serial.print(temp);
-  Serial.println(" C");
-  Serial.println("");
-  bno.setExtCrystalUse(true);
-  Serial.println("Calibration status values: 0=uncalibrated, 3=fully calibrated");
-}
-
-void setupAS5140()
-{
-  // connect to the AS5140 sensor
-  if (!encoder.begin())
-  {
-    Serial.println("Error setting up AS5140");
-  }
-  else
-  {
-    Serial.println("Successfully setting up AS5140");
-  }
-}
-float getAS5140_data()
-{
-  int rawData = encoder.read();
-  return mapFloat(rawData, 0, 1024, 0, 360);
-}
-
-int64_t newLocalTime()
-{
-  return baseTime - sysTimeAtBaseTime + int64_t(millis());
-}
-
-Imu prepareIMUData()
-{
-  Imu imuData = Imu_init_zero;
-
-  imuData.time = newLocalTime();
-
-  imu::Vector<3> acc = bno.getVector(Adafruit_BNO055::VECTOR_LINEARACCEL);
-  imu::Vector<3> gyro = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
-  imu::Quaternion quat = bno.getQuat();
-
-  imuData.has_acc = true;
-  imuData.acc.x = acc.x();
-  imuData.acc.y = acc.y();
-  imuData.acc.z = acc.z();
-
-  imuData.has_gyro = true;
-  imuData.gyro.x = gyro[0];
-  imuData.gyro.y = gyro.y();
-  imuData.gyro.z = gyro.z();
-
-  imuData.has_orientation = true;
-  imuData.orientation.x = quat.x();
-  imuData.orientation.y = quat.y();
-  imuData.orientation.z = quat.z();
-  imuData.orientation.w = quat.w();
-
-  return imuData;
-}
-
-Wind prepareWindData()
-{
-  Wind windData = Wind_init_zero;
-
-  windData.time = newLocalTime();
-
-  MedFilter.in(analogRead(AnalogPin));
-  int rawSensorData = MedFilter.out();
-  // map the raw sensor data to the voltage between 0.0 to 3.0
-  float sensorValue = mapFloat(float(rawSensorData), 6.0, 1024.0, 0.0, 1.0);
-  /* 
-     * convert the voltage to wind speed 
-     * calibration refrence 
-     * https://thepihut.com/products/adafruit-anemometer-wind-speed-sensor-w-analog-voltage-output
-    */
-  float measuredSpeed = mapFloat(sensorValue, minVoltage, maxVoltage, minSpeed, maxSpeed);
-  // Serial.print("wind speed : \t");
-  // Serial.println(measuredSpeed);
-
-  windData.speed = measuredSpeed;
-  windData.direction = getAS5140_data();
-  Serial.print(windData.direction);
-  return windData;
-}
 
 void getTime()
 {
@@ -178,10 +41,201 @@ void getTime()
   sysTimeAtBaseTime = int64_t(millis());
 }
 
+int64_t newLocalTime()
+{
+  return baseTime - sysTimeAtBaseTime + int64_t(millis());
+}
+
+#if HAS_VESC
+#include <VescStuff.cpp>
+#include <HardwareSerial.h>
+#include <VescUart.h>
+
+HardwareSerial SerialVesc(2);
+VescUart vesc;
+int updateFrequencyVesc = 20;
+int t0_Vesc = millis();
+int uploadFreqVesc = 5;
+
+int tcpPort = 8888;
+WiFiServer server(tcpPort);
+WiFiClient client = server.available();
+uint8_t bufferTCP[128] = {0};
+
+Speed prepareRpmVesc()
+{
+  Speed rpmData = Speed_init_zero;
+  rpmData.time = newLocalTime();
+  rpmData.RPM = vesc.data.rpm;
+  return rpmData;
+}
+
+Power preparePowerVesc()
+{
+  Power powerData = Power_init_zero;
+  powerData.time = newLocalTime();
+  powerData.current = vesc.data.avgInputCurrent;
+  powerData.voltage = vesc.data.inpVoltage;
+  return powerData;
+}
+
+void sendVescDataAtFrequency()
+{
+  if (int(millis()) - t0_Vesc >= (1000 / uploadFreqVesc))
+  {
+    vesc.getVescValues();
+    Speed rpmData = prepareRpmVesc();
+    Power powerData = preparePowerVesc();
+
+    protobufBridge.sendSpeed(rpmData);
+    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+    udp.endPacket();
+
+    protobufBridge.sendPower(powerData);
+    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+    udp.endPacket();
+
+    t0_Vesc = millis();
+  }
+}
+#endif
+
+enum SendDataType
+{
+  sendRpmHall,
+  sendForce,
+  sendPower,
+  sendImu,
+  sendTemperature,
+  sendWind,
+  sendVesc
+};
+
+void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency)
+{
+  if (int(millis()) - t0 >= (1000 / uploadFrequency))
+  {
+    switch (sendDataType)
+    {
+    case sendRpmHall:
+    {
+      #if RPM_HALL
+        Speed rpmData = hallSensor.prepareData(newLocalTime());
+        protobufBridge.sendSpeed(rpmData);
+      #endif
+      break;
+    }
+    case sendImu:
+    {
+      #if IMU
+        Imu imuData = imuSensor.prepareData(newLocalTime());
+        protobufBridge.sendIMU(imuData);
+      #endif
+      break;
+    }
+    case sendTemperature:
+    {
+      #if TEMPERATURE
+      Temperature temperatureData = temperatureSensor.prepareData(newLocalTime());
+      protobufBridge.sendTemperature(temperatureData);
+      #endif
+      break;
+    }
+    case sendWind:
+    {
+      #if WIND
+        Wind windData = windSensor.prepareData(newLocalTime());
+        protobufBridge.sendWind(windData);
+      #endif
+      break;
+    }
+    case sendPower:
+    {
+      #if POWER
+        Power powerData = powerSensor.prepareData(newLocalTime());
+        protobufBridge.sendPower(powerData);
+      #endif
+      break;
+    }
+    // case sendVesc:
+    // {
+    //   #if HAS_VESC
+    //     Speed prepareRpmVesc(newLocalTime());
+    //   #endif
+    //   break;
+    // }
+    default:
+      break;
+    }
+    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+    udp.endPacket();
+    t0 = millis();
+  }
+  else if (int(millis()) - t0 >= (1000 / (uploadFrequency * 2)))
+  {
+    digitalWrite(LED_PIN, LOW);
+  }
+  else
+  {
+    digitalWrite(LED_PIN, HIGH);
+  }
+}
+
+#if HAS_VESC
+void readAndSetRPMByTCP(WiFiClient client)
+{
+  if (client)
+  {
+    while (client.connected())
+    {
+      if (client.available() > 0)
+      {
+        client.read(bufferTCP, 1);
+        String str = String("Message length (bytes): ") + (bufferTCP[0]);
+        Serial.println(str);
+
+        int msg_length = bufferTCP[0];
+
+        client.read(bufferTCP, bufferTCP[0]);
+        Speed message = Speed_init_zero;
+        pb_istream_t stream = pb_istream_from_buffer(bufferTCP, msg_length);
+        bool status = pb_decode(&stream, Speed_fields, &message);
+
+        if (!status)
+        {
+          Serial.printf("Decoding failed: %s\n", PB_GET_ERROR(&stream));
+        }
+        else
+        {
+          Serial.printf("Your RPM number was %d!\nSending to the vesc...\n", (int)message.RPM);
+          vesc.setRPM(message.RPM);
+        }
+      }
+      return;
+    }
+  }
+}
+#endif
+
 void setup()
 {
-  Serial.begin(115200);
+  Serial.begin(115200); // USB to computer
   Serial.setDebugOutput(true);
+  while (!Serial)
+  {
+    ;
+  }
+
+  #if HAS_VESC
+  SerialVesc.begin(115200, SERIAL_8N1, 16, 17);
+  vesc.setSerialPort(&SerialVesc);
+  // Serial1.begin(115200);  // rx/tx pins of ESP32 (for the vesc)
+  // vesc.setSerialPort(&Serial1);
+  #endif
+
   pinMode(LED_PIN, OUTPUT);
 
   delay(10);
@@ -192,6 +246,7 @@ void setup()
   Serial.print("Connecting to ");
   Serial.println(ssid);
 
+  WiFi.mode(WIFI_STA); // Necessary?
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED)
@@ -203,62 +258,71 @@ void setup()
   Serial.printf("\nWiFi connected. IP address: ");
   Serial.println(WiFi.localIP());
 
+  #if HAS_VESC
+  server.begin(); // TCP
+  // delay(1000);
+  // client = server.available();
+  #endif
+
   WiFi.hostByName(addr, insertServerIP); // Define IPAddress object with the ip address string
-
-  // AS5140H
-  setupAS5140();
-
-  udp_insert.begin(udpPortRemoteInsert);
 
   // NTC
   // connect to udp_time
   Serial.println("Starting UDP");
-  udp_time.begin(udpPortLocalTime);
+  udp.begin(udpPortLocal);
   Serial.print("Local port: ");
-  // Serial.println(up);
 
   getTime();
 
-  setupAS5140();
-  // setupIMU();
+  #if WIND
+    windSensor.setupWindDirEncoder();
+  #endif
+  #if IMU
+    imuSensor.setup();
+  #endif
+  #if RPM_HALL
+    hallSensor.setup();
+  #endif
 }
 
 void loop()
 {
-  if (millis()-sysTimeAtBaseTime >= (secondsUntilNewTime*1000))
-  {
-    getTime();
-  }
-
   digitalWrite(LED_PIN, LOW);
 
-  // Wait if not connected to wifi
   if (WiFi.status() != WL_CONNECTED)
   {
     Serial.println("Connection failed, wait 5 sec...");
     delay(5000);
   }
   else
-  { 
-    // If connected, upload and blink at specified frequency
-    if (int(millis()) - t0 >= (1000 / uploadFrequency))
+  {
+    if (!(uint32_t(millis()) % (secondsUntilNewTime * 1000)))
     {
-      t0 = millis();
-      Wind windData = prepareWindData();
-      protobufBridge.sendWind(windData);
-      // Imu imuData = prepareIMUData();
-      // protobufBridge.sendIMU(imuData);
-      udp_insert.beginPacket(insertServerIP, udpPortRemoteInsert);
-      udp_insert.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-      udp_insert.endPacket();
+      sysTimeAtBaseTime = int64_t(millis());
+      getTime();
     }
-    else if (int(millis()) - t0 >= (1000 / (uploadFrequency * 2)))
-    {
-      digitalWrite(LED_PIN, LOW);
-    }
-    else
-    {
-      digitalWrite(LED_PIN, HIGH);
-    }
+
+    #if WIND
+      sendDataAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
+    #endif
+    #if IMU
+      sendDataAtFrequency(sendImu, imuSensor.t0, imuSensor.t0);
+    #endif
+    #if POWER
+      sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
+    #endif
+    #if RPM_HALL
+      sendDataAtFrequency(sendRpmHall, hallSensor.t0, hallSensor.uploadFrequency);      
+    #endif
+    #if TEMPERATURE
+      sendDataAtFrequency(sendTemperature, temperatureSensor.t0, temperatureSensor.uploadFrequency);
+    #endif
+    #if HAS_VESC
+      if (!client.connected()) // client = the TCP client who's going to send us something
+      {
+        client = server.available();
+      }
+      readAndSetRPMByTCP(client);
+    #endif
   }
 }
