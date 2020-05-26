@@ -1,11 +1,8 @@
 /*
-RPM part is based on Arduino Hall Effect Sensor Project by Arvind Sanjeev
+Based on Arduino Hall Effect Sensor Project by Arvind Sanjeev
 Link: http://diyhacking.com
-Temperature part is based on Adafruit Learning System guide on Thermistors by Limor Fried, Adafruit Industries
-Link:  https://learn.adafruit.com/thermistor/overview
 
-Both modified by Bertalan Kovács (bertalan@kitex.tech)
-Install ESP8266 on Arduino IDE: https://github.com/esp8266/Arduino/blob/master/README.md
+Modified by Bertalan Kovács (bertalan@kitex.tech) and Mathias Neuenschwander (mathias@kitex.tech)
 */
 
 #include "HallSensor.h"

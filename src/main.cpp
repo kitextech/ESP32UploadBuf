@@ -4,9 +4,6 @@
 #include <TimeSync.h>
 #include <ProtobufBridge.h>
 
-#include <HardwareSerial.h>
-#include <VescUart.h>
-
 #include <stdio.h>
 #include "./pb_encode.h"
 #include "./pb_decode.h"
@@ -28,6 +25,9 @@
 #define WIND 0
 #define POWER 0
 #define RPM_HALL 1
+#define TEMPERATURE 1
+
+#define HAS_VESC 0
 
 #if IMU
   #include <ImuSensor.h>
@@ -44,6 +44,19 @@
 #if RPM_HALL
   #include <HallSensor.h>
   HallSensor hallSensor(2, 7, 2);
+#endif
+#if TEMPERATURE
+  #include <TemperatureSensor.h>
+  TemperatureSensor temperatureSensor(1, A0, 10000, 25, 3950, 10000);
+#endif
+
+#if HAS_VESC
+  #include <HardwareSerial.h>
+  #include <VescUart.h>
+  HardwareSerial SerialVesc(2);
+  VescUart vesc;
+  int updateFrequencyVesc = 20;
+  int t0_Vesc = millis();
 #endif
 
 enum ServerName
@@ -79,11 +92,6 @@ WiFiServer server(tcpPort);
 WiFiClient client = server.available();
 uint8_t bufferTCP[128] = {0};
 
-// VESC control
-HardwareSerial SerialVesc(2);
-VescUart vesc;
-int updateFrequencyVesc = 20;
-int t0_Vesc = millis();
 
 // Time
 IPAddress timeServerIP;
@@ -96,7 +104,6 @@ const uint32_t secondsUntilNewTime = 300;
 // Upload
 
 int uploadFrequencyTemp = 1;
-int t0_Motor = millis();
 int t0_temp = millis();
 
 // int uploadFrequencyRPM = 2;
@@ -107,6 +114,8 @@ int t0_temp = millis();
 // int t0_IMU = millis();
 // int t0_power = millis();
 // int t0_Wind = millis();
+// int t0_Motor = millis();
+
 
 
 IPAddress insertServerIP;
@@ -139,17 +148,22 @@ ProtobufBridge protobufBridge;
 // #define POLE_PAIR_NUM 7 // 14 poles -> 7 pole pairs, counted manually
 
 // Teperature settings
-#define THERMISTORPIN A0        // which analog pin to connect
-#define THERMISTORNOMINAL 10000 // resistance at 25 degrees C
-#define TEMPERATURENOMINAL 25   // temp. for nominal resistance (almost always 25 C)
-#define NUMSAMPLES 5            // how many samples to take and average, more takes longer but is more 'smooth'
-#define BCOEFFICIENT 3950       // The beta coefficient of the thermistor (usually 3000-4000)
-#define SERIESRESISTOR 10000    // the value of the 'other' resistor
+// #define THERMISTORPIN A0        // which analog pin to connect
+// #define THERMISTORNOMINAL 10000 // resistance at 25 degrees C
+// #define TEMPERATURENOMINAL 25   // temp. for nominal resistance (almost always 25 C)
+// #define NUMSAMPLES 5            // how many samples to take and average, more takes longer but is more 'smooth'
+// #define BCOEFFICIENT 3950       // The beta coefficient of the thermistor (usually 3000-4000)
+// #define SERIESRESISTOR 10000    // the value of the 'other' resistor
 
 // unsigned int detection = 0; // Detection counter by the hall sensor
-float rpm = 0;
+// float rpm = 0;
 
-int adc_samples[NUMSAMPLES];
+// int adc_samples[NUMSAMPLES];
+
+int64_t newLocalTime()
+{
+  return baseTime - sysTimeAtBaseTime + int64_t(millis());
+}
 
 // Power measurements
 
@@ -247,10 +261,7 @@ int adc_samples[NUMSAMPLES];
 //   return direction;
 // }
 
-int64_t newLocalTime()
-{
-  return baseTime - sysTimeAtBaseTime + int64_t(millis());
-}
+
 
 // void setupMotor()
 // {
@@ -313,6 +324,7 @@ int64_t newLocalTime()
 //   return windData;
 // }
 
+#ifndef HAS_VESC
 Speed prepareRPMData(bool readFromVesc = true)
 {
   Speed rpmData = Speed_init_zero;
@@ -344,50 +356,51 @@ Speed prepareRPMData(bool readFromVesc = true)
 
   return rpmData;
 }
+#endif
 
-Temperature prepareTemperatureData()
-{
-  Temperature temperatureData = Temperature_init_zero;
+// Temperature prepareTemperatureData()
+// {
+//   Temperature temperatureData = Temperature_init_zero;
 
-  temperatureData.time = newLocalTime();
+//   temperatureData.time = newLocalTime();
 
-  uint8_t i;
-  float average;
+//   uint8_t i;
+//   float average;
 
-  // take N samples in a row, with a slight delay
-  for (i = 0; i < NUMSAMPLES; i++)
-  {
-    adc_samples[i] = analogRead(THERMISTORPIN);
-  }
+//   // take N samples in a row, with a slight delay
+//   for (i = 0; i < NUMSAMPLES; i++)
+//   {
+//     adc_samples[i] = analogRead(THERMISTORPIN);
+//   }
 
-  // average all the samples out
-  average = 0;
-  for (i = 0; i < NUMSAMPLES; i++)
-  {
-    average += adc_samples[i];
-  }
-  average /= NUMSAMPLES;
+//   // average all the samples out
+//   average = 0;
+//   for (i = 0; i < NUMSAMPLES; i++)
+//   {
+//     average += adc_samples[i];
+//   }
+//   average /= NUMSAMPLES;
 
-  // convert the value to resistance
-  average = 1023 / average - 1;
-  average = SERIESRESISTOR / average;
+//   // convert the value to resistance
+//   average = 1023 / average - 1;
+//   average = SERIESRESISTOR / average;
 
-  float steinhart;
-  steinhart = average / THERMISTORNOMINAL;          // (R/Ro)
-  steinhart = log(steinhart);                       // ln(R/Ro)
-  steinhart /= BCOEFFICIENT;                        // 1/B * ln(R/Ro)
-  steinhart += 1.0 / (TEMPERATURENOMINAL + 273.15); // + (1/To)
-  steinhart = 1.0 / steinhart;                      // Invert
-  steinhart -= 273.15;                              // convert to C
+//   float steinhart;
+//   steinhart = average / THERMISTORNOMINAL;          // (R/Ro)
+//   steinhart = log(steinhart);                       // ln(R/Ro)
+//   steinhart /= BCOEFFICIENT;                        // 1/B * ln(R/Ro)
+//   steinhart += 1.0 / (TEMPERATURENOMINAL + 273.15); // + (1/To)
+//   steinhart = 1.0 / steinhart;                      // Invert
+//   steinhart -= 273.15;                              // convert to C
 
-  Serial.print("Temperature: ");
-  Serial.print(steinhart);
-  Serial.println(" °C");
+//   Serial.print("Temperature: ");
+//   Serial.print(steinhart);
+//   Serial.println(" °C");
 
-  temperatureData.temperature = steinhart;
+//   temperatureData.temperature = steinhart;
 
-  return temperatureData;
-}
+//   return temperatureData;
+// }
 
 // Power preparePowerData()
 // {
@@ -439,12 +452,15 @@ Temperature prepareTemperatureData()
 //   return powerData;
 // }
 
+
+
 void getTime()
 {
   Serial.println("I shall now fetch the time!");
   baseTime = timeSync.getTime(timeServerIP, udp);
   sysTimeAtBaseTime = int64_t(millis());
 }
+
 
 enum SendDataType
 {
@@ -465,7 +481,7 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
     case sendRpmHall:
     {
       #if RPM_HALL
-        Speed rpmData = prepareRPMData(true);
+        Speed rpmData = hallSensor.prepareData(newLocalTime());
         protobufBridge.sendSpeed(rpmData);
       #endif
       break;
@@ -480,8 +496,10 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
     }
     case sendTemperature:
     {
-      Temperature temperatureData = prepareTemperatureData();
+      #if TEMPERATURE
+      Temperature temperatureData = temperatureSensor.prepareData(newLocalTime());
       protobufBridge.sendTemperature(temperatureData);
+      #endif
       break;
     }
     case sendWind:
@@ -518,6 +536,7 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
   }
 }
 
+#if HAS_VESC
 void readAndSetRPMByTCP(WiFiClient client)
 {
   if (client)
@@ -551,6 +570,7 @@ void readAndSetRPMByTCP(WiFiClient client)
     }
   }
 }
+#endif
 
 void setup()
 {
@@ -561,9 +581,11 @@ void setup()
     ;
   }
 
+  #if HAS_VESC
   // Setup serial / UART1 for the vesc
   SerialVesc.begin(115200, SERIAL_8N1, 16, 17);
   vesc.setSerialPort(&SerialVesc);
+  #endif
 
   // Serial1.begin(115200);  // rx/tx pins of ESP32 (for the vesc)
   // vesc.setSerialPort(&Serial1);
@@ -613,9 +635,6 @@ void setup()
   #if RPM_HALL
     hallSensor.setup();
   #endif
-
-
-  // setupMotor();
 }
 
 void loop()
@@ -635,12 +654,6 @@ void loop()
       getTime();
     }
 
-    if (!client.connected()) // client = the TCP client who's going to send us something
-    {
-      client = server.available();
-    }
-    // readAndSetRPMByTCP(client);
-
     #if WIND
       sendDataAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
     #endif
@@ -653,11 +666,20 @@ void loop()
     #if RPM_HALL
       sendDataAtFrequency(sendRpmHall, hallSensor.t0, hallSensor.uploadFrequency);      
     #endif
-    #if VESC
+    #if TEMPERATURE
+      sendDataAtFrequency(sendTemperature, temperatureSensor.t0, temperatureSensor.uploadFrequency);
+    #endif
+    #if HAS_VESC
       sendDataAtFrequency(sendRpmVesc, ?);
       sendDataAtFrequency(sendPowerVesc, ?);
     #endif
-    // sendDataAtFrequency(sendRpmHall, t0_RPM, uploadFrequencyRPM);
-    // sendDataAtFrequency(sendTemperature, t0_temp, uploadFrequencyTemp);
+
+    #if HAS_VESC
+    if (!client.connected()) // client = the TCP client who's going to send us something
+    {
+      client = server.available();
+    }
+    readAndSetRPMByTCP(client);
+    #endif
   }
 }
