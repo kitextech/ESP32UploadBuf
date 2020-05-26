@@ -10,13 +10,19 @@
 class HallSensor
 {
   public:
-    HallSensor(uint16_t uploadFreq);
-    void setup(uin8_t pin, );
+    HallSensor(uint8_t pinHall, uint8_t polePairNum, uint16_t uploadFreq);
+    void setup();
     Speed prepareData(int64_t time);
     
     int t0;
     uint16_t uploadFrequency;
 
   private:
+    static ICACHE_RAM_ATTR void magnet_detect();
+    static uint64_t detection;
+
+    float rpm = 0;
+    uint8_t PIN_HALL;
+    uint8_t POLE_PAIR_NUM;
 };
 #endif

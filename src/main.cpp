@@ -27,7 +27,7 @@
 #define IMU 0
 #define WIND 0
 #define POWER 0
-#define HALL 0
+#define RPM_HALL 1
 
 #if IMU
   #include <ImuSensor.h>
@@ -41,9 +41,9 @@
   #include <PowerSensor.h>
   PowerSensor powerSensor(50, A2, A3, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1);
 #endif
-#if HALL
+#if RPM_HALL
   #include <HallSensor.h>
-  HallSensor hallSensor(2);
+  HallSensor hallSensor(2, 7, 2);
 #endif
 
 enum ServerName
@@ -55,6 +55,7 @@ enum ServerName
 
 #define SERVERNAME blackPearl
 
+#define LED_PIN 0
 
 
 // #define SendKey 0 // Probably not needed (TCP)
@@ -145,7 +146,7 @@ ProtobufBridge protobufBridge;
 #define BCOEFFICIENT 3950       // The beta coefficient of the thermistor (usually 3000-4000)
 #define SERIESRESISTOR 10000    // the value of the 'other' resistor
 
-unsigned int detection = 0; // Detection counter by the hall sensor
+// unsigned int detection = 0; // Detection counter by the hall sensor
 float rpm = 0;
 
 int adc_samples[NUMSAMPLES];
@@ -181,12 +182,12 @@ int adc_samples[NUMSAMPLES];
 
 // Define the LED pin - different for different ESP's
 // #define LED_PIN LED_BUILTIN // For normal Arduino, possibly other ESP's
-#define LED_PIN 0
+// #define LED_PIN 0
 
-ICACHE_RAM_ATTR void magnet_detect() // This function is called whenever a magnet/interrupt is detected
-{
-  detection++;
-}
+// ICACHE_RAM_ATTR void magnet_detect() // This function is called whenever a magnet/interrupt is detected
+// {
+//   detection++;
+// }
 
 // float mapFloat(float value, float in_min, float in_max, float out_min, float out_max)
 // {
@@ -251,11 +252,11 @@ int64_t newLocalTime()
   return baseTime - sysTimeAtBaseTime + int64_t(millis());
 }
 
-void setupMotor()
-{
-  pinMode(PIN_HALL, INPUT_PULLUP);                                         // Pulling up the pin (equivalent of using the 10kOhm resistance on the board)
-  attachInterrupt(digitalPinToInterrupt(HALL), magnet_detect, RISING); // Initialize the intterrupt pin
-}
+// void setupMotor()
+// {
+//   pinMode(PIN_HALL, INPUT_PULLUP);                                         // Pulling up the pin (equivalent of using the 10kOhm resistance on the board)
+//   attachInterrupt(digitalPinToInterrupt(PIN_HALL), magnet_detect, RISING); // Initialize the intterrupt pin
+// }
 
 // Imu prepareIMUData()
 // {
@@ -329,14 +330,14 @@ Speed prepareRPMData(bool readFromVesc = true)
       return rpmData;
     }
   }
-  else
-  {
-    // 60 is to convert rps to rpm; 1000 to corrigate ms to s;
-    // division by pole pairs is to get the whole rotation not only between two plus polarity magnet ¨
-    rpm = float(60 * 1000) / (float(millis() - t0_Motor)) * float(detection) / float(POLE_PAIR_NUM);
-    detection = 0;
-    rpmData.RPM = rpm;
-  }
+  // else
+  // {
+  //   // 60 is to convert rps to rpm; 1000 to corrigate ms to s;
+  //   // division by pole pairs is to get the whole rotation not only between two plus polarity magnet ¨
+  //   rpm = float(60 * 1000) / (float(millis() - t0_Motor)) * float(detection) / float(POLE_PAIR_NUM);
+  //   detection = 0;
+  //   rpmData.RPM = rpm;
+  // }
 
   Serial.print("RPM: ");
   Serial.println(rpmData.RPM);
@@ -447,7 +448,7 @@ void getTime()
 
 enum SendDataType
 {
-  sendRPM,
+  sendRpmHall,
   sendForce,
   sendPower,
   sendImu,
@@ -459,12 +460,11 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
 {
   if (int(millis()) - t0 >= (1000 / uploadFrequency))
   {
-    t0 = millis();
     switch (sendDataType)
     {
-    case sendRPM:
+    case sendRpmHall:
     {
-      #if HALL
+      #if RPM_HALL
         Speed rpmData = prepareRPMData(true);
         protobufBridge.sendSpeed(rpmData);
       #endif
@@ -506,6 +506,7 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
     udp.beginPacket(insertServerIP, udpPortRemoteInsert);
     udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
     udp.endPacket();
+    t0 = millis();
   }
   else if (int(millis()) - t0 >= (1000 / (uploadFrequency * 2)))
   {
@@ -609,6 +610,9 @@ void setup()
   #if IMU
     imuSensor.setup();
   #endif
+  #if RPM_HALL
+    hallSensor.setup();
+  #endif
 
 
   // setupMotor();
@@ -616,7 +620,7 @@ void setup()
 
 void loop()
 {
-  digitalWrite(LED_PIN, LOW);
+  // digitalWrite(LED_PIN, LOW);
 
   if (WiFi.status() != WL_CONNECTED)
   {
@@ -646,11 +650,14 @@ void loop()
     #if POWER
       sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
     #endif
-    #if HALL
-      sendDataAtFrequency(sendRPM, hallSensor.t0, hallSensor.uploadFrequency);      
+    #if RPM_HALL
+      sendDataAtFrequency(sendRpmHall, hallSensor.t0, hallSensor.uploadFrequency);      
     #endif
-    // sendDataAtFrequency(sendRPM, t0_RPM, uploadFrequencyRPM);
+    #if VESC
+      sendDataAtFrequency(sendRpmVesc, ?);
+      sendDataAtFrequency(sendPowerVesc, ?);
+    #endif
+    // sendDataAtFrequency(sendRpmHall, t0_RPM, uploadFrequencyRPM);
     // sendDataAtFrequency(sendTemperature, t0_temp, uploadFrequencyTemp);
-
   }
 }
