@@ -15,14 +15,23 @@ WindSensor::WindSensor(uint8_t ADC_pin, int voltDivRatio, float vMin, float vMax
 
 void WindSensor::setupWindDirEncoder()
 {
-  // connect to the AS5140 sensor
-  if (!windDirEncoder.begin())
+  if (PWM_MODE)
   {
-    Serial.println("Error setting up wind direction encoder");
+    // set up the analog pin of the PWM encoder
+    windDirectionPWM_setup(A3);
+    Serial.println("Successfully set up PWM mode!");
   }
   else
   {
-    Serial.println("Successfully set up wind direction encoder");
+    // connect to the AS5140 sensor
+    if (!windDirEncoder.begin())
+    {
+      Serial.println("Error setting up wind direction encoder");
+    }
+    else
+    {
+      Serial.println("Successfully set up wind direction encoder");
+    }
   }
 }
 
@@ -49,6 +58,22 @@ float WindSensor::windDirection()
   return direction;
 }
 
+void WindSensor::windDirectionPWM_setup(uint8_t ADC_pin)
+{
+  analogPWMPin = ADC_pin;
+}
+
+float WindSensor::windDirectionPWM()
+{
+  float rawDir = analogRead(analogPWMPin);
+  float PWM_2_ANG = mapFloat(rawDir, 0.0F, 3980.0F, 0.0F, 360.0F);
+  /*
+  Note : the mechanical magnet installation is intended to have that offset. Ask hossein
+  */
+  //    Serial.println(PWM_2_ANG);
+  return PWM_2_ANG;
+}
+
 Wind WindSensor::prepareData(int64_t time)
 {
   Wind windData = Wind_init_zero;
@@ -68,7 +93,14 @@ Wind WindSensor::prepareData(int64_t time)
   // Serial.println(measuredSpeed);
 
   windData.speed = mapFloat(sensorValue, voltMin, voltMax, speedMin, speedMax);
-  windData.direction = windDirection();
+  if (PWM_MODE)
+  {
+    windData.direction = windDirectionPWM();
+  }
+  else
+  {
+    windData.direction = windDirection();
+  }
   /*
   Serial.print("Wind : ");
   Serial.println(windData.speed);

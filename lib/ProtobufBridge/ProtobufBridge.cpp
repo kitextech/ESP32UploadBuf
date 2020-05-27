@@ -92,7 +92,8 @@ void ProtobufBridge::sendWind(Wind wind)
   }
 }
 
-void ProtobufBridge::sendSpeed(Speed speed) {
+void ProtobufBridge::sendSpeed(Speed speed)
+{
   // create stream from the buffer
   pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
 
@@ -129,7 +130,8 @@ void ProtobufBridge::sendSpeed(Speed speed) {
   Serial.println(stream.bytes_written);
 }
 
-void ProtobufBridge::sendTemperature(Temperature temperature) {
+void ProtobufBridge::sendTemperature(Temperature temperature)
+{
   // create stream from the buffer
   pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
 
@@ -166,7 +168,8 @@ void ProtobufBridge::sendTemperature(Temperature temperature) {
   Serial.println(stream.bytes_written);
 }
 
-void ProtobufBridge::sendPower(Power power) {
+void ProtobufBridge::sendPower(Power power)
+{
   // create stream from the buffer
   pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
 
