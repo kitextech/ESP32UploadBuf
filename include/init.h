@@ -26,7 +26,7 @@ ImuSensor imuSensor(5);
 #endif
 #if WIND
 #include <WindSensor.h>
-WindSensor windSensor(A2, 2, 0.4, 2, 0.2, 32.4, 3);
+WindSensor windSensor(A2, 2, 0.4, 2, 0.2, 32.4, true, 3);
 #endif
 #if POWER
 #include <PowerSensor.h>
@@ -51,17 +51,17 @@ int updateFrequencyVesc = 20;
 int t0_Vesc = millis();
 int uploadFreqVesc = 5;
 
-int tcpPort = 8888;
+int tcpPort = 10101;
 WiFiServer server(tcpPort);
 WiFiClient client = server.available();
 uint8_t bufferTCP[128] = {0};
 #endif
 
 // WiFi
-const char *ssid = "kitex"; // use kitexField
+const char *ssid = "kitexField"; // use kitexField
 const char *password = "morepower";
 // const char *addr = "192.168.8.144"; // black-pearl pi
-const char *addr = "192.168.8.145"; // Office laptop (make static if not already...)
+const char *addr = "192.168.8.107"; // Office laptop (make static if not already...)
 // const char *addr = "192.168.8.106"; // Andreas laptop
 
 // Time and udp setup

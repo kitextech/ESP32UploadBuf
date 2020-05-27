@@ -1,6 +1,6 @@
 #include "WindSensor.h"
 
-WindSensor::WindSensor(uint8_t ADC_pin, int voltDivRatio, float vMin, float vMax, float SpeedMin, float SpeedMax, int Freq)
+WindSensor::WindSensor(uint8_t ADC_pin, int voltDivRatio, float vMin, float vMax, float SpeedMin, float SpeedMax, bool pwmMode, int Freq)
 {
   t0 = millis();
   voltMin = vMin / voltDivRatio;
@@ -8,6 +8,7 @@ WindSensor::WindSensor(uint8_t ADC_pin, int voltDivRatio, float vMin, float vMax
   analogPin = ADC_pin;
   speedMin = SpeedMin;
   speedMax = SpeedMax;
+  PWM_MODE = pwmMode;
   uploadFrequency = Freq;
   // analogPin = analogPin;
   Serial.println("Created a Wind sensor");
