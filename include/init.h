@@ -9,16 +9,18 @@
 #include "./pb_decode.h"
 #include "schema.pb.h"
 
+#include <PID_v1.h>
+
 #define LED_PIN 0
 
 // Sensor and vesc include statements
 #define IMU 0
-#define WIND 1
+#define WIND 0
 #define POWER 0
 #define RPM_HALL 0
 #define TEMPERATURE 0
 
-#define HAS_VESC 0
+#define HAS_VESC 1
 
 #if IMU
 #include <ImuSensor.h>
@@ -47,9 +49,16 @@ TemperatureSensor temperatureSensor(1, A0, 10000, 25, 3950, 10000);
 
 HardwareSerial SerialVesc(2);
 VescUart vesc;
-int updateFrequencyVesc = 20;
 int t0_Vesc = millis();
-int uploadFreqVesc = 5;
+int uploadFreqVesc = 30;
+
+double maxCurrent = 35;
+
+double rpmSetpoint = 3000.0, Input, brakeCurrent;
+double Kp=0.002, Ki=0.0, Kd=0.00015; // Kp = 0.002, Kd = 0.0001, Ki = 0 working okay
+PID myPID(&Input, &brakeCurrent, &rpmSetpoint, Kp, Ki, Kd, DIRECT);
+
+double startRPM = 2000;
 
 int tcpPort = 10101;
 WiFiServer server(tcpPort);

@@ -48,6 +48,20 @@ void sendVescDataAtFrequency()
     udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
     udp.endPacket();
 
+    if (rpmData.RPM < startRPM + 250.0)
+    {
+      vesc.setRPM(startRPM);
+      Serial.printf("Ramping up to RPM: %f\n", startRPM);
+    }
+    else
+    {
+      Input = (double)rpmData.RPM;
+      myPID.Compute();
+
+      vesc.setBrakeCurrent(brakeCurrent);
+      Serial.printf("Applied brake current: %f\n", brakeCurrent);
+    }
+    
     t0_Vesc = millis();
   }
 }
@@ -138,8 +152,8 @@ void readAndSetRPMByTCP(WiFiClient client)
       if (client.available() > 0)
       {
         client.read(bufferTCP, 1);
-        String str = String("Message length (bytes): ") + (bufferTCP[0]);
-        Serial.println(str);
+        // String str = String("Message length (bytes): ") + (bufferTCP[0]);
+        // Serial.println(str);
 
         int msg_length = bufferTCP[0];
 
@@ -154,8 +168,10 @@ void readAndSetRPMByTCP(WiFiClient client)
         }
         else
         {
-          Serial.printf("Your RPM number was %d!\nSending to the vesc...\n", (int)message.RPM);
-          vesc.setRPM(message.RPM);
+          // Serial.printf("Your RPM number was %d!\nSending to the vesc...\n", (int)message.RPM);
+          // vesc.setRPM(message.RPM);
+          Serial.printf("You set the RPM to %d!\n", (int)message.RPM);
+          rpmSetpoint = message.RPM;
         }
       }
       return;
@@ -178,6 +194,10 @@ void setup()
   vesc.setSerialPort(&SerialVesc);
   // Serial1.begin(115200);  // rx/tx pins of ESP32 (for the vesc)
   // vesc.setSerialPort(&Serial1);
+  myPID.SetMode(AUTOMATIC);
+  myPID.SetOutputLimits(0.0, maxCurrent);
+  myPID.SetSampleTime(33);
+  myPID.SetControllerDirection(REVERSE);
   #endif
 
   pinMode(LED_PIN, OUTPUT);
@@ -267,6 +287,7 @@ void loop()
         client = server.available();
       }
       readAndSetRPMByTCP(client);
+      sendVescDataAtFrequency();
     #endif
   }
 }
