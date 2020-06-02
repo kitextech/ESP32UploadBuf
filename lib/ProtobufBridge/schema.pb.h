@@ -20,7 +20,9 @@ typedef enum _Wrapper_DataType {
     Wrapper_DataType_IMU = 2,
     Wrapper_DataType_POWER = 3,
     Wrapper_DataType_TEMPERATURE = 4,
-    Wrapper_DataType_WIND = 5
+    Wrapper_DataType_WIND = 5,
+    Wrapper_DataType_VESC = 6,
+    Wrapper_DataType_SETPOINT = 7
 } Wrapper_DataType;
 
 /* Struct definitions */
@@ -43,6 +45,12 @@ typedef struct _Quaternion {
     float w;
 } Quaternion;
 
+typedef struct _SetPoint {
+    int64_t time;
+    float RPM;
+    float Torque;
+} SetPoint;
+
 typedef struct _Speed {
     int64_t time;
     float RPM;
@@ -52,6 +60,19 @@ typedef struct _Temperature {
     int64_t time;
     float temperature;
 } Temperature;
+
+typedef struct _VESC {
+    int64_t time;
+    float avgMotorCurrent;
+    float avgInputCurrent;
+    float dutyCycleNow;
+    int32_t rpm;
+    float inpVoltage;
+    float ampHours;
+    float ampHoursCharged;
+    int32_t tachometer;
+    int32_t tachometerAbs;
+} VESC;
 
 typedef struct _Vector3 {
     float x;
@@ -83,8 +104,8 @@ typedef struct _Imu {
 
 /* Helper constants for enums */
 #define _Wrapper_DataType_MIN Wrapper_DataType_SPEED
-#define _Wrapper_DataType_MAX Wrapper_DataType_WIND
-#define _Wrapper_DataType_ARRAYSIZE ((Wrapper_DataType)(Wrapper_DataType_WIND+1))
+#define _Wrapper_DataType_MAX Wrapper_DataType_SETPOINT
+#define _Wrapper_DataType_ARRAYSIZE ((Wrapper_DataType)(Wrapper_DataType_SETPOINT+1))
 
 
 /* Initializer values for message structs */
@@ -97,6 +118,8 @@ typedef struct _Imu {
 #define Wind_init_default                        {0, 0, 0}
 #define Vector3_init_default                     {0, 0, 0}
 #define Quaternion_init_default                  {0, 0, 0, 0}
+#define VESC_init_default                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+#define SetPoint_init_default                    {0, 0, 0}
 #define Wrapper_init_zero                        {_Wrapper_DataType_MIN, {{NULL}, NULL}}
 #define Speed_init_zero                          {0, 0}
 #define Force_init_zero                          {0, 0, 0}
@@ -106,6 +129,8 @@ typedef struct _Imu {
 #define Wind_init_zero                           {0, 0, 0}
 #define Vector3_init_zero                        {0, 0, 0}
 #define Quaternion_init_zero                     {0, 0, 0, 0}
+#define VESC_init_zero                           {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+#define SetPoint_init_zero                       {0, 0, 0}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define Force_time_tag                           1
@@ -118,10 +143,23 @@ typedef struct _Imu {
 #define Quaternion_y_tag                         2
 #define Quaternion_z_tag                         3
 #define Quaternion_w_tag                         4
+#define SetPoint_time_tag                        1
+#define SetPoint_RPM_tag                         2
+#define SetPoint_Torque_tag                      3
 #define Speed_time_tag                           1
 #define Speed_RPM_tag                            2
 #define Temperature_time_tag                     1
 #define Temperature_temperature_tag              2
+#define VESC_time_tag                            1
+#define VESC_avgMotorCurrent_tag                 2
+#define VESC_avgInputCurrent_tag                 3
+#define VESC_dutyCycleNow_tag                    4
+#define VESC_rpm_tag                             5
+#define VESC_inpVoltage_tag                      6
+#define VESC_ampHours_tag                        7
+#define VESC_ampHoursCharged_tag                 8
+#define VESC_tachometer_tag                      9
+#define VESC_tachometerAbs_tag                   10
 #define Vector3_x_tag                            1
 #define Vector3_y_tag                            2
 #define Vector3_z_tag                            3
@@ -201,6 +239,27 @@ X(a, STATIC,   SINGULAR, FLOAT,    w,                 4)
 #define Quaternion_CALLBACK NULL
 #define Quaternion_DEFAULT NULL
 
+#define VESC_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, INT64,    time,              1) \
+X(a, STATIC,   SINGULAR, FLOAT,    avgMotorCurrent,   2) \
+X(a, STATIC,   SINGULAR, FLOAT,    avgInputCurrent,   3) \
+X(a, STATIC,   SINGULAR, FLOAT,    dutyCycleNow,      4) \
+X(a, STATIC,   SINGULAR, INT32,    rpm,               5) \
+X(a, STATIC,   SINGULAR, FLOAT,    inpVoltage,        6) \
+X(a, STATIC,   SINGULAR, FLOAT,    ampHours,          7) \
+X(a, STATIC,   SINGULAR, FLOAT,    ampHoursCharged,   8) \
+X(a, STATIC,   SINGULAR, INT32,    tachometer,        9) \
+X(a, STATIC,   SINGULAR, INT32,    tachometerAbs,    10)
+#define VESC_CALLBACK NULL
+#define VESC_DEFAULT NULL
+
+#define SetPoint_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, INT64,    time,              1) \
+X(a, STATIC,   SINGULAR, FLOAT,    RPM,               2) \
+X(a, STATIC,   SINGULAR, FLOAT,    Torque,            3)
+#define SetPoint_CALLBACK NULL
+#define SetPoint_DEFAULT NULL
+
 extern const pb_msgdesc_t Wrapper_msg;
 extern const pb_msgdesc_t Speed_msg;
 extern const pb_msgdesc_t Force_msg;
@@ -210,6 +269,8 @@ extern const pb_msgdesc_t Temperature_msg;
 extern const pb_msgdesc_t Wind_msg;
 extern const pb_msgdesc_t Vector3_msg;
 extern const pb_msgdesc_t Quaternion_msg;
+extern const pb_msgdesc_t VESC_msg;
+extern const pb_msgdesc_t SetPoint_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define Wrapper_fields &Wrapper_msg
@@ -221,6 +282,8 @@ extern const pb_msgdesc_t Quaternion_msg;
 #define Wind_fields &Wind_msg
 #define Vector3_fields &Vector3_msg
 #define Quaternion_fields &Quaternion_msg
+#define VESC_fields &VESC_msg
+#define SetPoint_fields &SetPoint_msg
 
 /* Maximum encoded size of messages (where known) */
 /* Wrapper_size depends on runtime parameters */
@@ -232,6 +295,8 @@ extern const pb_msgdesc_t Quaternion_msg;
 #define Wind_size                                21
 #define Vector3_size                             15
 #define Quaternion_size                          20
+#define VESC_size                                74
+#define SetPoint_size                            21
 
 #ifdef __cplusplus
 } /* extern "C" */
