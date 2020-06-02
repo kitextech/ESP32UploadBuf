@@ -55,7 +55,7 @@ int uploadFreqVesc = 30;
 double maxCurrent = 35;
 
 double rpmSetpoint = 3000.0, Input, brakeCurrent;
-double Kp=0.002, Ki=0.0, Kd=0.00015; // Kp = 0.002, Kd = 0.0001, Ki = 0 working okay
+double Kp=0.0002, Ki=0.0002, Kd=0.0000; // Kp = 0.002, Kd = 0.0001, Ki = 0 working okay
 PID myPID(&Input, &brakeCurrent, &rpmSetpoint, Kp, Ki, Kd, DIRECT);
 
 double startRPM = 2000;
@@ -70,7 +70,7 @@ uint8_t bufferTCP[128] = {0};
 const char *ssid = "kitexField"; // use kitexField
 const char *password = "morepower";
 // const char *addr = "192.168.8.144"; // black-pearl pi
-const char *addr = "192.168.8.107"; // Office laptop (make static if not already...)
+const char *addr = "192.168.43.59"; // Office laptop (make static if not already...)
 // const char *addr = "192.168.8.106"; // Andreas laptop
 
 // Time and udp setup

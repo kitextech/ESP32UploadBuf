@@ -172,6 +172,7 @@ void readAndSetRPMByTCP(WiFiClient client)
           // vesc.setRPM(message.RPM);
           Serial.printf("You set the RPM to %d!\n", (int)message.RPM);
           rpmSetpoint = message.RPM;
+          startRPM = rpmSetpoint - 2000;
         }
       }
       return;
