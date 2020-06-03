@@ -9,6 +9,8 @@
 #include "./pb_decode.h"
 #include "schema.pb.h"
 
+#include <PID_v1.h>
+
 #define LED_PIN 0
 
 // Sensor and vesc include statements
@@ -19,7 +21,7 @@
 #define RPM_HALL 0
 #define TEMPERATURE 0
 
-#define HAS_VESC 0
+#define HAS_VESC 1
 
 #if IMU
 #include <ImuSensor.h>
@@ -27,7 +29,7 @@ ImuSensor imuSensor(5);
 #endif
 #if WIND
 #include <WindSensor.h>
-WindSensor windSensor(A2, 2, 0.4, 2, 0.2, 32.4, 3);
+WindSensor windSensor(A2, 2, 0.4, 2, 0.2, 32.4, true, 3);
 #endif
 
 #if (POWER && POWER_DUMP)
@@ -53,21 +55,26 @@ TemperatureSensor temperatureSensor(1, A0, 10000, 25, 3950, 10000);
 
 HardwareSerial SerialVesc(2);
 VescUart vesc;
-int updateFrequencyVesc = 20;
 int t0_Vesc = millis();
-int uploadFreqVesc = 5;
+int uploadFreqVesc = 30;
 
-int tcpPort = 8888;
+double maxCurrent = 40;
+double minCurrent = -5;
+double rpmSetpoint = 0.0;
+
+float pidSUM = 0;
+
+int tcpPort = 10101;
 WiFiServer server(tcpPort);
 WiFiClient client = server.available();
 uint8_t bufferTCP[128] = {0};
 #endif
 
 // WiFi
-const char *ssid = "kitex"; // use kitexField
+const char *ssid = "kitexField"; // use kitexField
 const char *password = "morepower";
 // const char *addr = "192.168.8.144"; // black-pearl pi
-const char *addr = "192.168.8.145"; // Office laptop (make static if not already...)
+const char *addr = "192.168.43.59"; // Office laptop (make static if not already...)
 // const char *addr = "192.168.8.106"; // Andreas laptop
 
 // Time and udp setup

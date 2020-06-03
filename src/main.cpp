@@ -13,21 +13,29 @@ int64_t newLocalTime()
 }
 
 #if HAS_VESC
-Speed prepareRpmVesc()
+Vesc prepareVescData()
 {
-  Speed rpmData = Speed_init_zero;
-  rpmData.time = newLocalTime();
-  rpmData.RPM = vesc.data.rpm;
-  return rpmData;
+  Vesc vescData = Vesc_init_zero;
+  vescData.time = newLocalTime();
+  vescData.avgMotorCurrent = vesc.data.avgMotorCurrent;
+  vescData.avgInputCurrent = vesc.data.avgInputCurrent;
+  vescData.dutyCycleNow = vesc.data.dutyCycleNow;
+  vescData.rpm = vesc.data.rpm;
+  vescData.inpVoltage = vesc.data.inpVoltage;
+  vescData.ampHours = vesc.data.ampHours;
+  vescData.ampHoursCharged = vesc.data.ampHoursCharged;
+  vescData.tachometer = vesc.data.tachometer;
+  vescData.tachometerAbs = vesc.data.tachometerAbs;
+  return vescData;
 }
 
-Power preparePowerVesc()
+Setpoint prepareSetPoint(float current_sp)
 {
-  Power powerData = Power_init_zero;
-  powerData.time = newLocalTime();
-  powerData.current = vesc.data.avgInputCurrent;
-  powerData.voltage = vesc.data.inpVoltage;
-  return powerData;
+  Setpoint setpointData Setpoint_init_zero;
+  setpointData.time = newLocalTime();
+  setpointData.RPM = rpmSetpoint;
+  setpointData.current = current_sp;
+  return setpointData;
 }
 
 void sendVescDataAtFrequency()
@@ -35,20 +43,80 @@ void sendVescDataAtFrequency()
   if (int(millis()) - t0_Vesc >= (1000 / uploadFreqVesc))
   {
     vesc.getVescValues();
-    Speed rpmData = prepareRpmVesc();
-    Power powerData = preparePowerVesc();
 
-    protobufBridge.sendSpeed(rpmData);
+    float error = vesc.data.rpm - rpmSetpoint;
+    pidSUM += error * (1 / uploadFreqVesc);
+
+    if (pidSUM > 10000)
+    {
+      pidSUM = 10000;
+    }
+    if (pidSUM < -10000)
+    {
+      pidSUM = -10000;
+    }
+
+    float current_sp = -1 * (0.001 * error + 0.0002 * pidSUM);
+    if (current_sp > maxCurrent)
+    {
+      current_sp = maxCurrent;
+    }
+    if (current_sp < minCurrent)
+    {
+      current_sp = minCurrent;
+    }
+
+    vesc.setCurrent(current_sp);
+
+    Vesc vescData = prepareVescData();
+    protobufBridge.sendVesc(vescData);
     udp.beginPacket(insertServerIP, udpPortRemoteInsert);
     udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
     udp.endPacket();
 
-    protobufBridge.sendPower(powerData);
+    Setpoint setpointData = prepareSetPoint(current_sp);
+    protobufBridge.sendSetpoint(setpointData);
     udp.beginPacket(insertServerIP, udpPortRemoteInsert);
     udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
     udp.endPacket();
-
+    
     t0_Vesc = millis();
+  }
+}
+
+void readAndSetRPMByTCP(WiFiClient client)
+{
+  if (client)
+  {
+    while (client.connected())
+    {
+      if (client.available() > 0)
+      {
+        client.read(bufferTCP, 1);
+        // String str = String("Message length (bytes): ") + (bufferTCP[0]);
+        // Serial.println(str);
+
+        int msg_length = bufferTCP[0];
+
+        client.read(bufferTCP, bufferTCP[0]);
+        Speed message = Speed_init_zero;
+        pb_istream_t stream = pb_istream_from_buffer(bufferTCP, msg_length);
+        bool status = pb_decode(&stream, Speed_fields, &message);
+
+        if (!status)
+        {
+          Serial.printf("Decoding failed: %s\n", PB_GET_ERROR(&stream));
+        }
+        else
+        {
+          // Serial.printf("Your RPM number was %d!\nSending to the vesc...\n", (int)message.RPM);
+          // vesc.setRPM(message.RPM);
+          Serial.printf("You set the RPM to %d!\n", (int)message.RPM);
+          rpmSetpoint = message.RPM;
+        }
+      }
+      return;
+    }
   }
 }
 #endif
@@ -129,39 +197,7 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
 }
 
 #if HAS_VESC
-void readAndSetRPMByTCP(WiFiClient client)
-{
-  if (client)
-  {
-    while (client.connected())
-    {
-      if (client.available() > 0)
-      {
-        client.read(bufferTCP, 1);
-        String str = String("Message length (bytes): ") + (bufferTCP[0]);
-        Serial.println(str);
 
-        int msg_length = bufferTCP[0];
-
-        client.read(bufferTCP, bufferTCP[0]);
-        Speed message = Speed_init_zero;
-        pb_istream_t stream = pb_istream_from_buffer(bufferTCP, msg_length);
-        bool status = pb_decode(&stream, Speed_fields, &message);
-
-        if (!status)
-        {
-          Serial.printf("Decoding failed: %s\n", PB_GET_ERROR(&stream));
-        }
-        else
-        {
-          Serial.printf("Your RPM number was %d!\nSending to the vesc...\n", (int)message.RPM);
-          vesc.setRPM(message.RPM);
-        }
-      }
-      return;
-    }
-  }
-}
 #endif
 
 void setup()
@@ -249,32 +285,32 @@ void loop()
       sysTimeAtBaseTime = int64_t(millis());
       getTime();
     }
-
-#if WIND
-    sendDataAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
-#endif
-#if IMU
-    sendDataAtFrequency(sendImu, imuSensor.t0, imuSensor.t0);
-#endif
-#if POWER && !POWER_DUMP
-    sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
-#endif
-#if POWER && POWER_DUMP
-    sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
-    powerSensor.PowerControl();
-#endif
-#if RPM_HALL
-    sendDataAtFrequency(sendRpmHall, hallSensor.t0, hallSensor.uploadFrequency);
-#endif
-#if TEMPERATURE
-    sendDataAtFrequency(sendTemperature, temperatureSensor.t0, temperatureSensor.uploadFrequency);
-#endif
-#if HAS_VESC
-    if (!client.connected()) // client = the TCP client who's going to send us something
-    {
-      client = server.available();
-    }
-    readAndSetRPMByTCP(client);
-#endif
+    #if WIND
+      sendDataAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
+    #endif
+    #if IMU
+      sendDataAtFrequency(sendImu, imuSensor.t0, imuSensor.t0);
+    #endif
+    #if POWER && !POWER_DUMP
+        sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
+    #endif
+    #if POWER && POWER_DUMP
+        sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
+        powerSensor.PowerControl();
+    #endif
+    #if RPM_HALL
+      sendDataAtFrequency(sendRpmHall, hallSensor.t0, hallSensor.uploadFrequency);      
+    #endif
+    #if TEMPERATURE
+      sendDataAtFrequency(sendTemperature, temperatureSensor.t0, temperatureSensor.uploadFrequency);
+    #endif
+    #if HAS_VESC
+      if (!client.connected()) // client = the TCP client who's going to send us something
+      {
+        client = server.available();
+      }
+      readAndSetRPMByTCP(client);
+      sendVescDataAtFrequency();
+    #endif
   }
 }
