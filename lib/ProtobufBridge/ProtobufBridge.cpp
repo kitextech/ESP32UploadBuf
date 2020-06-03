@@ -202,17 +202,17 @@ void ProtobufBridge::sendPower(Power power)
 
   wrapMessageLength = stream.bytes_written;
 
-  Serial.print("Message Length wrapper: ");
-  Serial.println(stream.bytes_written);
+  // Serial.print("Message Length wrapper: ");
+  // Serial.println(stream.bytes_written);
 }
 
-void ProtobufBridge::sendVesc(VESC vesc)
+void ProtobufBridge::sendVesc(Vesc vesc)
 {
   // create stream from the buffer
   pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
 
   // write vesc data
-  bool status = pb_encode(&stream, VESC_fields, &vesc);
+  bool status = pb_encode(&stream, Vesc_fields, &vesc);
   // check the status
   if (!status)
   {
@@ -244,13 +244,13 @@ void ProtobufBridge::sendVesc(VESC vesc)
   Serial.println(stream.bytes_written);
 }
 
-void ProtobufBridge::sendSetpoint(SetPoint setpoint)
+void ProtobufBridge::sendSetpoint(Setpoint setpoint)
 {
   // create stream from the buffer
   pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
 
   // write setpoint data
-  bool status = pb_encode(&stream, SetPoint_fields, &setpoint);
+  bool status = pb_encode(&stream, Setpoint_fields, &setpoint);
   // check the status
   if (!status)
   {

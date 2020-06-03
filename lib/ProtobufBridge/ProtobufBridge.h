@@ -24,8 +24,8 @@ public:
   void sendTemperature(Temperature temperature);
   void sendPower(Power power);
 
-  void sendVesc(VESC vesc);
-  void sendSetpoint(SetPoint setpoint);
+  void sendVesc(Vesc vesc);
+  void sendSetpoint(Setpoint setpoint);
 
   static bool writeBuffer(pb_ostream_t *stream, const pb_field_iter_t *field, void *const *arg);
 

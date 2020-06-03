@@ -52,13 +52,11 @@ VescUart vesc;
 int t0_Vesc = millis();
 int uploadFreqVesc = 30;
 
-double maxCurrent = 35;
+double maxCurrent = 40;
+double minCurrent = -5;
+double rpmSetpoint = 0.0;
 
-double rpmSetpoint = 3000.0, Input, brakeCurrent;
-double Kp=0.0002, Ki=0.0002, Kd=0.0000; // Kp = 0.002, Kd = 0.0001, Ki = 0 working okay
-PID myPID(&Input, &brakeCurrent, &rpmSetpoint, Kp, Ki, Kd, DIRECT);
-
-double startRPM = 2000;
+float pidSUM = 0;
 
 int tcpPort = 10101;
 WiFiServer server(tcpPort);

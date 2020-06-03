@@ -13,9 +13,9 @@ int64_t newLocalTime()
 }
 
 #if HAS_VESC
-VESC prepareVescData()
+Vesc prepareVescData()
 {
-  VESC vescData = VESC_init_zero;
+  Vesc vescData = Vesc_init_zero;
   vescData.time = newLocalTime();
   vescData.avgMotorCurrent = vesc.data.avgMotorCurrent;
   vescData.avgInputCurrent = vesc.data.avgInputCurrent;
@@ -29,12 +29,12 @@ VESC prepareVescData()
   return vescData;
 }
 
-SetPoint prepareSetPoint()
+Setpoint prepareSetPoint(float current_sp)
 {
-  SetPoint setpointData SetPoint_init_zero;
+  Setpoint setpointData Setpoint_init_zero;
   setpointData.time = newLocalTime();
   setpointData.RPM = rpmSetpoint;
-  setpointData.Torque = brakeCurrent;
+  setpointData.current = current_sp;
   return setpointData;
 }
 
@@ -44,27 +44,37 @@ void sendVescDataAtFrequency()
   {
     vesc.getVescValues();
 
-    if (vesc.data.rpm < startRPM + 250.0)
-    {
-      vesc.setRPM(startRPM);
-      Serial.printf("Ramping up to RPM: %f\n", startRPM);
-    }
-    else
-    {
-      Input = (double)vesc.data.rpm;
-      myPID.Compute();
+    float error = vesc.data.rpm - rpmSetpoint;
+    pidSUM += error * (1 / uploadFreqVesc);
 
-      vesc.setBrakeCurrent(brakeCurrent);
-      Serial.printf("Applied brake current: %f\n", brakeCurrent);
+    if (pidSUM > 10000)
+    {
+      pidSUM = 10000;
+    }
+    if (pidSUM < -10000)
+    {
+      pidSUM = -10000;
     }
 
-    VESC vescData = prepareVescData();
+    float current_sp = -1 * (0.001 * error + 0.0002 * pidSUM);
+    if (current_sp > maxCurrent)
+    {
+      current_sp = maxCurrent;
+    }
+    if (current_sp < minCurrent)
+    {
+      current_sp = minCurrent;
+    }
+
+    vesc.setCurrent(current_sp);
+
+    Vesc vescData = prepareVescData();
     protobufBridge.sendVesc(vescData);
     udp.beginPacket(insertServerIP, udpPortRemoteInsert);
     udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
     udp.endPacket();
 
-    SetPoint setpointData = prepareSetPoint();
+    Setpoint setpointData = prepareSetPoint(current_sp);
     protobufBridge.sendSetpoint(setpointData);
     udp.beginPacket(insertServerIP, udpPortRemoteInsert);
     udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
@@ -103,7 +113,6 @@ void readAndSetRPMByTCP(WiFiClient client)
           // vesc.setRPM(message.RPM);
           Serial.printf("You set the RPM to %d!\n", (int)message.RPM);
           rpmSetpoint = message.RPM;
-          startRPM = rpmSetpoint - 2000;
         }
       }
       return;
@@ -205,10 +214,6 @@ void setup()
   vesc.setSerialPort(&SerialVesc);
   // Serial1.begin(115200);  // rx/tx pins of ESP32 (for the vesc)
   // vesc.setSerialPort(&Serial1);
-  myPID.SetMode(AUTOMATIC);
-  myPID.SetOutputLimits(0.0, maxCurrent);
-  myPID.SetSampleTime(33);
-  myPID.SetControllerDirection(REVERSE);
   #endif
 
   pinMode(LED_PIN, OUTPUT);
