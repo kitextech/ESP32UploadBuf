@@ -16,7 +16,8 @@
 // Sensor and vesc include statements
 #define IMU 0
 #define WIND 0
-#define POWER 0
+#define POWER 1
+#define POWER_DUMP 1
 #define RPM_HALL 0
 #define TEMPERATURE 0
 
@@ -30,7 +31,12 @@ ImuSensor imuSensor(5);
 #include <WindSensor.h>
 WindSensor windSensor(A2, 2, 0.4, 2, 0.2, 32.4, true, 3);
 #endif
-#if POWER
+
+#if (POWER && POWER_DUMP)
+#include <PowerSensor.h>
+PowerSensor powerSensor(50, A2, A3, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1, 3.2, 4.0, A9, A10, A11, A12);
+#endif
+#if (POWER && !POWER_DUMP)
 #include <PowerSensor.h>
 PowerSensor powerSensor(50, A2, A3, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1);
 #endif
