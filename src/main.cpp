@@ -72,42 +72,42 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
     {
     case sendRpmHall:
     {
-      #if RPM_HALL
-        Speed rpmData = hallSensor.prepareData(newLocalTime());
-        protobufBridge.sendSpeed(rpmData);
-      #endif
+#if RPM_HALL
+      Speed rpmData = hallSensor.prepareData(newLocalTime());
+      protobufBridge.sendSpeed(rpmData);
+#endif
       break;
     }
     case sendImu:
     {
-      #if IMU
-        Imu imuData = imuSensor.prepareData(newLocalTime());
-        protobufBridge.sendIMU(imuData);
-      #endif
+#if IMU
+      Imu imuData = imuSensor.prepareData(newLocalTime());
+      protobufBridge.sendIMU(imuData);
+#endif
       break;
     }
     case sendTemperature:
     {
-      #if TEMPERATURE
+#if TEMPERATURE
       Temperature temperatureData = temperatureSensor.prepareData(newLocalTime());
       protobufBridge.sendTemperature(temperatureData);
-      #endif
+#endif
       break;
     }
     case sendWind:
     {
-      #if WIND
-        Wind windData = windSensor.prepareData(newLocalTime());
-        protobufBridge.sendWind(windData);
-      #endif
+#if WIND
+      Wind windData = windSensor.prepareData(newLocalTime());
+      protobufBridge.sendWind(windData);
+#endif
       break;
     }
     case sendPower:
     {
-      #if POWER
-        Power powerData = powerSensor.prepareData(newLocalTime());
-        protobufBridge.sendPower(powerData);
-      #endif
+#if POWER
+      Power powerData = powerSensor.prepareData(newLocalTime());
+      protobufBridge.sendPower(powerData);
+#endif
       break;
     }
     default:
@@ -173,12 +173,16 @@ void setup()
     ;
   }
 
-  #if HAS_VESC
+#if HAS_VESC
   SerialVesc.begin(115200, SERIAL_8N1, 16, 17);
   vesc.setSerialPort(&SerialVesc);
-  // Serial1.begin(115200);  // rx/tx pins of ESP32 (for the vesc)
-  // vesc.setSerialPort(&Serial1);
-  #endif
+// Serial1.begin(115200);  // rx/tx pins of ESP32 (for the vesc)
+// vesc.setSerialPort(&Serial1);
+#endif
+
+#if POWER_DUMP
+  powerSensor.PowerDumpSetup();
+#endif
 
   pinMode(LED_PIN, OUTPUT);
 
@@ -202,11 +206,11 @@ void setup()
   Serial.printf("\nWiFi connected. IP address: ");
   Serial.println(WiFi.localIP());
 
-  #if HAS_VESC
+#if HAS_VESC
   server.begin(); // TCP
-  // delay(1000);
-  // client = server.available();
-  #endif
+// delay(1000);
+// client = server.available();
+#endif
 
   WiFi.hostByName(addr, insertServerIP); // Define IPAddress object with the ip address string
 
@@ -218,15 +222,15 @@ void setup()
 
   getTime();
 
-  #if WIND
-    windSensor.setupWindDirEncoder();
-  #endif
-  #if IMU
-    imuSensor.setup();
-  #endif
-  #if RPM_HALL
-    hallSensor.setup();
-  #endif
+#if WIND
+  windSensor.setupWindDirEncoder();
+#endif
+#if IMU
+  imuSensor.setup();
+#endif
+#if RPM_HALL
+  hallSensor.setup();
+#endif
 }
 
 void loop()
@@ -240,33 +244,37 @@ void loop()
   }
   else
   {
-    if (millis()-sysTimeAtBaseTime >= (secondsUntilNewTime*1000))
+    if (millis() - sysTimeAtBaseTime >= (secondsUntilNewTime * 1000))
     {
       sysTimeAtBaseTime = int64_t(millis());
       getTime();
     }
 
-    #if WIND
-      sendDataAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
-    #endif
-    #if IMU
-      sendDataAtFrequency(sendImu, imuSensor.t0, imuSensor.t0);
-    #endif
-    #if POWER
-      sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
-    #endif
-    #if RPM_HALL
-      sendDataAtFrequency(sendRpmHall, hallSensor.t0, hallSensor.uploadFrequency);      
-    #endif
-    #if TEMPERATURE
-      sendDataAtFrequency(sendTemperature, temperatureSensor.t0, temperatureSensor.uploadFrequency);
-    #endif
-    #if HAS_VESC
-      if (!client.connected()) // client = the TCP client who's going to send us something
-      {
-        client = server.available();
-      }
-      readAndSetRPMByTCP(client);
-    #endif
+#if WIND
+    sendDataAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
+#endif
+#if IMU
+    sendDataAtFrequency(sendImu, imuSensor.t0, imuSensor.t0);
+#endif
+#if POWER && !POWER_DUMP
+    sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
+#endif
+#if POWER && POWER_DUMP
+    sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
+    powerSensor.PowerControl();
+#endif
+#if RPM_HALL
+    sendDataAtFrequency(sendRpmHall, hallSensor.t0, hallSensor.uploadFrequency);
+#endif
+#if TEMPERATURE
+    sendDataAtFrequency(sendTemperature, temperatureSensor.t0, temperatureSensor.uploadFrequency);
+#endif
+#if HAS_VESC
+    if (!client.connected()) // client = the TCP client who's going to send us something
+    {
+      client = server.available();
+    }
+    readAndSetRPMByTCP(client);
+#endif
   }
 }
