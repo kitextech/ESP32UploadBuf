@@ -205,3 +205,79 @@ void ProtobufBridge::sendPower(Power power)
   Serial.print("Message Length wrapper: ");
   Serial.println(stream.bytes_written);
 }
+
+void ProtobufBridge::sendVesc(VESC vesc)
+{
+  // create stream from the buffer
+  pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
+
+  // write vesc data
+  bool status = pb_encode(&stream, VESC_fields, &vesc);
+  // check the status
+  if (!status)
+  {
+    Serial.println("Failed to encode vesc");
+    return;
+  }
+  // Serial.print("Message Length vesc: ");
+  // Serial.println(stream.bytes_written);
+  messageLength = stream.bytes_written;
+
+  stream = pb_ostream_from_buffer(bufferWrapper, sizeof(bufferWrapper));
+
+  // wrapper
+  Wrapper wrap = Wrapper_init_zero;
+  wrap.type = Wrapper_DataType_VESC;
+  wrap.data.funcs.encode = &ProtobufBridge::writeBuffer;
+
+  status = pb_encode(&stream, Wrapper_fields, &wrap);
+
+  if (!status)
+  {
+    Serial.println("Failed to encode wrapper");
+    return;
+  }
+
+  wrapMessageLength = stream.bytes_written;
+
+  Serial.print("Message Length wrapper: ");
+  Serial.println(stream.bytes_written);
+}
+
+void ProtobufBridge::sendSetpoint(SetPoint setpoint)
+{
+  // create stream from the buffer
+  pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
+
+  // write setpoint data
+  bool status = pb_encode(&stream, SetPoint_fields, &setpoint);
+  // check the status
+  if (!status)
+  {
+    Serial.println("Failed to encode setpoint");
+    return;
+  }
+  // Serial.print("Message Length setpoint: ");
+  // Serial.println(stream.bytes_written);
+  messageLength = stream.bytes_written;
+
+  stream = pb_ostream_from_buffer(bufferWrapper, sizeof(bufferWrapper));
+
+  // wrapper
+  Wrapper wrap = Wrapper_init_zero;
+  wrap.type = Wrapper_DataType_SETPOINT;
+  wrap.data.funcs.encode = &ProtobufBridge::writeBuffer;
+
+  status = pb_encode(&stream, Wrapper_fields, &wrap);
+
+  if (!status)
+  {
+    Serial.println("Failed to encode wrapper");
+    return;
+  }
+
+  wrapMessageLength = stream.bytes_written;
+
+  Serial.print("Message Length wrapper: ");
+  Serial.println(stream.bytes_written);
+}

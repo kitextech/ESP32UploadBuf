@@ -1,4 +1,3 @@
-
 #ifndef ProtobufBridge_h
 
 #define ProtobufBridge_h
@@ -24,6 +23,10 @@ public:
   void sendSpeed(Speed speed);
   void sendTemperature(Temperature temperature);
   void sendPower(Power power);
+
+  void sendVesc(VESC vesc);
+  void sendSetpoint(SetPoint setpoint);
+
   static bool writeBuffer(pb_ostream_t *stream, const pb_field_iter_t *field, void *const *arg);
 
 private:

@@ -13,21 +13,29 @@ int64_t newLocalTime()
 }
 
 #if HAS_VESC
-Speed prepareRpmVesc()
+VESC prepareVescData()
 {
-  Speed rpmData = Speed_init_zero;
-  rpmData.time = newLocalTime();
-  rpmData.RPM = vesc.data.rpm;
-  return rpmData;
+  VESC vescData = VESC_init_zero;
+  vescData.time = newLocalTime();
+  vescData.avgMotorCurrent = vesc.data.avgMotorCurrent;
+  vescData.avgInputCurrent = vesc.data.avgInputCurrent;
+  vescData.dutyCycleNow = vesc.data.dutyCycleNow;
+  vescData.rpm = vesc.data.rpm;
+  vescData.inpVoltage = vesc.data.inpVoltage;
+  vescData.ampHours = vesc.data.ampHours;
+  vescData.ampHoursCharged = vesc.data.ampHoursCharged;
+  vescData.tachometer = vesc.data.tachometer;
+  vescData.tachometerAbs = vesc.data.tachometerAbs;
+  return vescData;
 }
 
-Power preparePowerVesc()
+SetPoint prepareSetPoint()
 {
-  Power powerData = Power_init_zero;
-  powerData.time = newLocalTime();
-  powerData.current = vesc.data.avgInputCurrent;
-  powerData.voltage = vesc.data.inpVoltage;
-  return powerData;
+  SetPoint setpointData SetPoint_init_zero;
+  setpointData.time = newLocalTime();
+  setpointData.RPM = rpmSetpoint;
+  setpointData.Torque = brakeCurrent;
+  return setpointData;
 }
 
 void sendVescDataAtFrequency()
@@ -35,34 +43,71 @@ void sendVescDataAtFrequency()
   if (int(millis()) - t0_Vesc >= (1000 / uploadFreqVesc))
   {
     vesc.getVescValues();
-    Speed rpmData = prepareRpmVesc();
-    Power powerData = preparePowerVesc();
 
-    protobufBridge.sendSpeed(rpmData);
-    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
-    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-    udp.endPacket();
-
-    protobufBridge.sendPower(powerData);
-    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
-    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-    udp.endPacket();
-
-    if (rpmData.RPM < startRPM + 250.0)
+    if (vesc.data.rpm < startRPM + 250.0)
     {
       vesc.setRPM(startRPM);
       Serial.printf("Ramping up to RPM: %f\n", startRPM);
     }
     else
     {
-      Input = (double)rpmData.RPM;
+      Input = (double)vesc.data.rpm;
       myPID.Compute();
 
       vesc.setBrakeCurrent(brakeCurrent);
       Serial.printf("Applied brake current: %f\n", brakeCurrent);
     }
+
+    VESC vescData = prepareVescData();
+    protobufBridge.sendVesc(vescData);
+    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+    udp.endPacket();
+
+    SetPoint setpointData = prepareSetPoint();
+    protobufBridge.sendSetpoint(setpointData);
+    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+    udp.endPacket();
     
     t0_Vesc = millis();
+  }
+}
+
+void readAndSetRPMByTCP(WiFiClient client)
+{
+  if (client)
+  {
+    while (client.connected())
+    {
+      if (client.available() > 0)
+      {
+        client.read(bufferTCP, 1);
+        // String str = String("Message length (bytes): ") + (bufferTCP[0]);
+        // Serial.println(str);
+
+        int msg_length = bufferTCP[0];
+
+        client.read(bufferTCP, bufferTCP[0]);
+        Speed message = Speed_init_zero;
+        pb_istream_t stream = pb_istream_from_buffer(bufferTCP, msg_length);
+        bool status = pb_decode(&stream, Speed_fields, &message);
+
+        if (!status)
+        {
+          Serial.printf("Decoding failed: %s\n", PB_GET_ERROR(&stream));
+        }
+        else
+        {
+          // Serial.printf("Your RPM number was %d!\nSending to the vesc...\n", (int)message.RPM);
+          // vesc.setRPM(message.RPM);
+          Serial.printf("You set the RPM to %d!\n", (int)message.RPM);
+          rpmSetpoint = message.RPM;
+          startRPM = rpmSetpoint - 2000;
+        }
+      }
+      return;
+    }
   }
 }
 #endif
@@ -143,42 +188,7 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
 }
 
 #if HAS_VESC
-void readAndSetRPMByTCP(WiFiClient client)
-{
-  if (client)
-  {
-    while (client.connected())
-    {
-      if (client.available() > 0)
-      {
-        client.read(bufferTCP, 1);
-        // String str = String("Message length (bytes): ") + (bufferTCP[0]);
-        // Serial.println(str);
 
-        int msg_length = bufferTCP[0];
-
-        client.read(bufferTCP, bufferTCP[0]);
-        Speed message = Speed_init_zero;
-        pb_istream_t stream = pb_istream_from_buffer(bufferTCP, msg_length);
-        bool status = pb_decode(&stream, Speed_fields, &message);
-
-        if (!status)
-        {
-          Serial.printf("Decoding failed: %s\n", PB_GET_ERROR(&stream));
-        }
-        else
-        {
-          // Serial.printf("Your RPM number was %d!\nSending to the vesc...\n", (int)message.RPM);
-          // vesc.setRPM(message.RPM);
-          Serial.printf("You set the RPM to %d!\n", (int)message.RPM);
-          rpmSetpoint = message.RPM;
-          startRPM = rpmSetpoint - 2000;
-        }
-      }
-      return;
-    }
-  }
-}
 #endif
 
 void setup()
