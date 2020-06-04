@@ -11,6 +11,11 @@
 
 #include <PID_v1.h>
 
+#include <queue>
+#include <list>
+
+using namespace std; 
+
 #define LED_PIN 0
 
 // Sensor and vesc include statements
@@ -20,6 +25,8 @@
 #define POWER_DUMP 0
 #define RPM_HALL 0
 #define TEMPERATURE 0
+
+#define MODE_ARRAY_LENGTH 5
 
 #define HAS_VESC 1
 
@@ -57,10 +64,16 @@ HardwareSerial SerialVesc(2);
 VescUart vesc;
 int t0_Vesc = millis();
 int uploadFreqVesc = 30;
+int t0_ramp;
+float rpmDiff;
+int rampingTime = 3000;
+float rpm_sp = 0.0;
 
-double maxCurrent = 5;
-double minCurrent = -45;
-double rpmSetpoint = 0.0;
+float maxCurrent = 5;
+float minCurrent = -45;
+float rpmSetpoint = 0.0;
+
+int rpmSetpointArray[MODE_ARRAY_LENGTH] = {0}; 
 
 float pidSUM = 0;
 
@@ -74,7 +87,7 @@ uint8_t bufferTCP[128] = {0};
 const char *ssid = "kitexField"; // use kitexField
 const char *password = "morepower";
 // const char *addr = "192.168.8.144"; // black-pearl pi
-const char *addr = "192.168.8.126"; // Office laptop (make static if not already...)
+const char *addr = "192.168.8.107"; // Office laptop (make static if not already...)
 // const char *addr = "192.168.8.106"; // Andreas laptop
 
 // Time and udp setup

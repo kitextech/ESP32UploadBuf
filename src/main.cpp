@@ -29,16 +29,16 @@ Vesc prepareVescData()
   return vescData;
 }
 
-Setpoint prepareSetPoint(float current_sp)
+Setpoint prepareSetPoint(float rpm_sp)
 {
   Setpoint setpointData Setpoint_init_zero;
   setpointData.time = newLocalTime();
-  setpointData.RPM = rpmSetpoint;
-  setpointData.current = current_sp;
+  setpointData.RPM = rpm_sp;
+  setpointData.current = 0;
   return setpointData;
 }
 
-void sendVescDataAtFrequency()
+/*void sendVescDataAtFrequency()
 {
   if (int(millis()) - t0_Vesc >= (1000 / uploadFreqVesc))
   {
@@ -82,6 +82,34 @@ void sendVescDataAtFrequency()
     
     t0_Vesc = millis();
   }
+}*/
+
+int mode(int a[],int n) {
+   int maxValue = 0, maxCount = 0, i, j;
+
+   for (i = 0; i < n; ++i) {
+      int count = 0;
+      
+      for (j = 0; j < n; ++j) {
+         if (a[j] == a[i])
+         ++count;
+      }
+      
+      if (count > maxCount) {
+         maxCount = count;
+         maxValue = a[i];
+      }
+   }
+
+   return maxValue;
+}
+
+void updateArray(int newElement, int n)
+{
+  for (int i = n-1; i > 0; --i) {
+    rpmSetpointArray[i] = rpmSetpointArray[i-1] ;
+  } 
+  rpmSetpointArray[0] = newElement;
 }
 
 void readAndSetRPMByTCP(WiFiClient client)
@@ -109,14 +137,46 @@ void readAndSetRPMByTCP(WiFiClient client)
         }
         else
         {
-          // Serial.printf("Your RPM number was %d!\nSending to the vesc...\n", (int)message.RPM);
-          // vesc.setRPM(message.RPM);
-          Serial.printf("You set the RPM to %d!\n", (int)message.RPM);
-          rpmSetpoint = message.RPM;
+          updateArray((int)(message.RPM), MODE_ARRAY_LENGTH);
+          if (message.RPM == mode(rpmSetpointArray, MODE_ARRAY_LENGTH) && message.RPM != rpmSetpoint)
+          {
+            Serial.printf("RPM is set to %d\n", (int)message.RPM);  
+            rpmDiff = message.RPM - (float)rpmSetpoint;
+            t0_ramp = millis();
+            rpmSetpoint = (float)mode(rpmSetpointArray, MODE_ARRAY_LENGTH);
+          }
         }
       }
       return;
     }
+  }
+}
+
+void setRPMByTCP()
+{
+  if (int(millis()) - t0_Vesc >= (1000 / uploadFreqVesc))
+  {
+    vesc.getVescValues();
+    if (t0_ramp + rampingTime > millis())
+      rpm_sp = (float(millis()) - float(t0_ramp)) / rampingTime * rpmDiff + ((float)rpmSetpoint - rpmDiff);
+    else
+      rpm_sp = rpmSetpoint;
+    Serial.printf("RPM: %f\n", rpm_sp);  
+    vesc.setRPM(rpm_sp);
+
+    Vesc vescData = prepareVescData();
+    protobufBridge.sendVesc(vescData);
+    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+    udp.endPacket();
+
+    Setpoint setpointData = prepareSetPoint(rpm_sp);
+    protobufBridge.sendSetpoint(setpointData);
+    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+    udp.endPacket();
+    
+    t0_Vesc = millis();
   }
 }
 #endif
@@ -310,7 +370,8 @@ void loop()
         client = server.available();
       }
       readAndSetRPMByTCP(client);
-      sendVescDataAtFrequency();
+      // sendVescDataAtFrequency();
+      setRPMByTCP();
     #endif
   }
 }
