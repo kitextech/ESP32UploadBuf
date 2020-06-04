@@ -16,8 +16,8 @@
 // Sensor and vesc include statements
 #define IMU 0
 #define WIND 0
-#define POWER 1
-#define POWER_DUMP 1
+#define POWER 0
+#define POWER_DUMP 0
 #define RPM_HALL 0
 #define TEMPERATURE 0
 
@@ -58,8 +58,8 @@ VescUart vesc;
 int t0_Vesc = millis();
 int uploadFreqVesc = 30;
 
-double maxCurrent = 40;
-double minCurrent = -5;
+double maxCurrent = 5;
+double minCurrent = -45;
 double rpmSetpoint = 0.0;
 
 float pidSUM = 0;
@@ -74,7 +74,7 @@ uint8_t bufferTCP[128] = {0};
 const char *ssid = "kitexField"; // use kitexField
 const char *password = "morepower";
 // const char *addr = "192.168.8.144"; // black-pearl pi
-const char *addr = "192.168.43.59"; // Office laptop (make static if not already...)
+const char *addr = "192.168.8.126"; // Office laptop (make static if not already...)
 // const char *addr = "192.168.8.106"; // Andreas laptop
 
 // Time and udp setup
