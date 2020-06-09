@@ -25,10 +25,9 @@ using namespace std;
 #define POWER_DUMP 0
 #define RPM_HALL 0
 #define TEMPERATURE 0
+#define FORCE 1
 
-#define MODE_ARRAY_LENGTH 5
-
-#define HAS_VESC 1
+#define HAS_VESC 0
 
 #if IMU
 #include <ImuSensor.h>
@@ -55,10 +54,20 @@ HallSensor hallSensor(2, 7, 2);
 #include <TemperatureSensor.h>
 TemperatureSensor temperatureSensor(1, A0, 10000, 25, 3950, 10000);
 #endif
+#if FORCE
+#include <ForceSensor.h>
+ForceSensor forceSensors[] = {
+    ForceSensor(1, A1, A0, -9.479e-005, -0.3162, 10),
+    ForceSensor(2, A11, A12, -9.462e-005, 1.444, 10),
+    ForceSensor(3, A9, A10, -9.332e-005, -0.7352, 10)
+};
+#endif
 
 #if HAS_VESC
 #include <HardwareSerial.h>
 #include <VescUart.h>
+
+#define MODE_ARRAY_LENGTH 5
 
 HardwareSerial SerialVesc(2);
 VescUart vesc;

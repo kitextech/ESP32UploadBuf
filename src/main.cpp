@@ -192,7 +192,7 @@ enum SendDataType
   sendVesc
 };
 
-void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency)
+void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency, int i=0)
 {
   if (int(millis()) - t0 >= (1000 / uploadFrequency))
   {
@@ -237,6 +237,14 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
       protobufBridge.sendPower(powerData);
 #endif
       break;
+    }
+    case sendForce:
+    {
+#if FORCE
+      Force forceData = forceSensors[i].prepareData(newLocalTime());
+      protobufBridge.sendForce(forceData);
+#endif
+    break;
     }
     default:
       break;
@@ -327,6 +335,13 @@ void setup()
 #if RPM_HALL
   hallSensor.setup();
 #endif
+#if FORCE
+  for (int i=0; i < (sizeof(forceSensors)/sizeof(*forceSensors)); i++)
+  {
+    Serial.println(i);
+    forceSensors[i].setup();
+  }
+#endif
 }
 
 void loop()
@@ -346,32 +361,40 @@ void loop()
       getTime();
     }
     #if WIND
-      sendDataAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
+    sendDataAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
     #endif
     #if IMU
-      sendDataAtFrequency(sendImu, imuSensor.t0, imuSensor.t0);
+    sendDataAtFrequency(sendImu, imuSensor.t0, imuSensor.t0);
     #endif
     #if POWER && !POWER_DUMP
-        sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
+    sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
     #endif
     #if POWER && POWER_DUMP
-        sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
-        powerSensor.PowerControl();
+    sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
+    powerSensor.PowerControl();
     #endif
     #if RPM_HALL
-      sendDataAtFrequency(sendRpmHall, hallSensor.t0, hallSensor.uploadFrequency);      
+    sendDataAtFrequency(sendRpmHall, hallSensor.t0, hallSensor.uploadFrequency);      
     #endif
     #if TEMPERATURE
-      sendDataAtFrequency(sendTemperature, temperatureSensor.t0, temperatureSensor.uploadFrequency);
+    sendDataAtFrequency(sendTemperature, temperatureSensor.t0, temperatureSensor.uploadFrequency);
     #endif
+    #if FORCE
+    for (int i=0; i < (sizeof(forceSensors)/sizeof(*forceSensors)); i++)
+    {
+      // Serial.println(i);
+      sendDataAtFrequency(sendForce, forceSensors[i].t0, forceSensors[i].uploadFrequency, i);
+    }
+    #endif
+
     #if HAS_VESC
-      if (!client.connected()) // client = the TCP client who's going to send us something
-      {
-        client = server.available();
-      }
-      readAndSetRPMByTCP(client);
-      // sendVescDataAtFrequency();
-      setRPMByTCP();
+    if (!client.connected()) // client = the TCP client who's going to send us something
+    {
+      client = server.available();
+    }
+    readAndSetRPMByTCP(client);
+    // sendVescDataAtFrequency();
+    setRPMByTCP();
     #endif
   }
 }

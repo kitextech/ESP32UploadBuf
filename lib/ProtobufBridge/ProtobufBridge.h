@@ -23,6 +23,7 @@ public:
   void sendSpeed(Speed speed);
   void sendTemperature(Temperature temperature);
   void sendPower(Power power);
+  void sendForce(Force force);
 
   void sendVesc(Vesc vesc);
   void sendSetpoint(Setpoint setpoint);

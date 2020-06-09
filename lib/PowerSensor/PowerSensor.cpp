@@ -45,7 +45,7 @@ PowerSensor::PowerSensor(uint8_t numSamples, uint8_t voltagePin, uint8_t current
   DigitalPin4 = dumpPin4;
 
   t0 = millis();
-};
+};  // What's this semicolon doing here?
 
 Power PowerSensor::prepareData(int64_t time)
 {
