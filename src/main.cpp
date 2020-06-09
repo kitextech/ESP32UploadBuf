@@ -292,7 +292,6 @@ void loop()
     sendDataAtFrequency(sendImu, imuSensor.t0, imuSensor.t0);
 #endif
 #if POWER && !POWER_DUMP
-    Serial.println("I am in Loop ");
     sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
 #endif
 #if POWER && POWER_DUMP

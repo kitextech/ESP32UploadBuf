@@ -16,8 +16,8 @@
 // Sensor and vesc include statements
 #define IMU 0
 #define WIND 0
-#define POWER 0
-#define POWER_DUMP 0
+#define POWER 1
+#define POWER_DUMP 1
 #define RPM_HALL 0
 #define TEMPERATURE 0
 
