@@ -79,7 +79,7 @@ void sendVescDataAtFrequency()
     udp.beginPacket(insertServerIP, udpPortRemoteInsert);
     udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
     udp.endPacket();
-    
+
     t0_Vesc = millis();
   }
 }
@@ -285,32 +285,33 @@ void loop()
       sysTimeAtBaseTime = int64_t(millis());
       getTime();
     }
-    #if WIND
-      sendDataAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
-    #endif
-    #if IMU
-      sendDataAtFrequency(sendImu, imuSensor.t0, imuSensor.t0);
-    #endif
-    #if POWER && !POWER_DUMP
-        sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
-    #endif
-    #if POWER && POWER_DUMP
-        sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
-        powerSensor.PowerControl();
-    #endif
-    #if RPM_HALL
-      sendDataAtFrequency(sendRpmHall, hallSensor.t0, hallSensor.uploadFrequency);      
-    #endif
-    #if TEMPERATURE
-      sendDataAtFrequency(sendTemperature, temperatureSensor.t0, temperatureSensor.uploadFrequency);
-    #endif
-    #if HAS_VESC
-      if (!client.connected()) // client = the TCP client who's going to send us something
-      {
-        client = server.available();
-      }
-      readAndSetRPMByTCP(client);
-      sendVescDataAtFrequency();
-    #endif
+#if WIND
+    sendDataAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
+#endif
+#if IMU
+    sendDataAtFrequency(sendImu, imuSensor.t0, imuSensor.t0);
+#endif
+#if POWER && !POWER_DUMP
+    Serial.println("I am in Loop ");
+    sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
+#endif
+#if POWER && POWER_DUMP
+    sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
+    powerSensor.PowerControl();
+#endif
+#if RPM_HALL
+    sendDataAtFrequency(sendRpmHall, hallSensor.t0, hallSensor.uploadFrequency);
+#endif
+#if TEMPERATURE
+    sendDataAtFrequency(sendTemperature, temperatureSensor.t0, temperatureSensor.uploadFrequency);
+#endif
+#if HAS_VESC
+    if (!client.connected()) // client = the TCP client who's going to send us something
+    {
+      client = server.available();
+    }
+    readAndSetRPMByTCP(client);
+    sendVescDataAtFrequency();
+#endif
   }
 }
