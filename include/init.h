@@ -16,8 +16,8 @@
 // Sensor and vesc include statements
 #define IMU 0
 #define WIND 0
-#define POWER 1
-#define POWER_DUMP 1
+#define POWER 0
+#define POWER_DUMP 0
 #define RPM_HALL 0
 #define TEMPERATURE 0
 
@@ -57,8 +57,8 @@ VescUart vesc;
 int t0_Vesc = millis();
 int uploadFreqVesc = 30;
 
-double maxCurrent = 40;
-double minCurrent = -5;
+double maxCurrent = 5;
+double minCurrent = -45;
 double rpmSetpoint = 0.0;
 
 float pidSUM = 0;
