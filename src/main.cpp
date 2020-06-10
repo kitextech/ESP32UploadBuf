@@ -1,15 +1,17 @@
 #include "init.h"
 
-void getTime()
-{
-  Serial.println("I shall now fetch the time!");
-  baseTime = timeSync.getTime(timeServerIP, udp);
-  sysTimeAtBaseTime = int64_t(millis());
-}
+// void getTime()
+// {
+//   Serial.println("I shall now fetch the time!");
+//   baseTime = timeSync.getTime(timeServerIP, udp);
+//   sysTimeAtBaseTime = int64_t(millis());
+// }
 
 int64_t newLocalTime()
 {
-  return baseTime - sysTimeAtBaseTime + int64_t(millis());
+  struct timeval tv_now;
+  gettimeofday(&tv_now, NULL);
+  return (int64_t)tv_now.tv_sec * 1000000L + (int64_t)tv_now.tv_usec;
 }
 
 #if HAS_VESC
@@ -320,11 +322,19 @@ void setup()
 
   // NTC
   // connect to udp_time
-  Serial.println("Starting UDP");
-  udp.begin(udpPortLocal);
-  Serial.print("Local port: ");
+  // Serial.println("Starting UDP");
+  // udp.begin(udpPortLocal);
+  // Serial.print("Local port: ");
 
-  getTime();
+
+  configTzTime("0", addr); // https://github.com/espressif/arduino-esp32/issues/1114 & https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/system_time.html
+
+  while (newLocalTime() < 1e6*60*24*365) {
+    Serial.print("Get time from "); Serial.println(addr);
+    delay(1000);
+  }
+ 
+
 
 #if WIND
   windSensor.setupWindDirEncoder();
@@ -355,11 +365,6 @@ void loop()
   }
   else
   {
-    if (millis() - sysTimeAtBaseTime >= (secondsUntilNewTime * 1000))
-    {
-      sysTimeAtBaseTime = int64_t(millis());
-      getTime();
-    }
     #if WIND
     sendDataAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
     #endif
@@ -397,4 +402,6 @@ void loop()
     setRPMByTCP();
     #endif
   }
+  Serial.printf("time: %lld\n", newLocalTime());
+  delay(1000);
 }

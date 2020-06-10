@@ -47,7 +47,7 @@ void ProtobufBridge::sendIMU(Imu imu)
   wrapMessageLength = stream.bytes_written;
 
   // Serial.print("Message Length wrapper: ");
-  Serial.println(stream.bytes_written);
+  // Serial.println(stream.bytes_written);
 }
 
 
@@ -129,8 +129,8 @@ void ProtobufBridge::sendSpeed(Speed speed)
 
   wrapMessageLength = stream.bytes_written;
 
-  Serial.print("Message Length wrapper: ");
-  Serial.println(stream.bytes_written);
+  // Serial.print("Message Length wrapper: ");
+  // Serial.println(stream.bytes_written);
 }
 
 
@@ -168,8 +168,8 @@ void ProtobufBridge::sendTemperature(Temperature temperature)
 
   wrapMessageLength = stream.bytes_written;
 
-  Serial.print("Message Length wrapper: ");
-  Serial.println(stream.bytes_written);
+  // Serial.print("Message Length wrapper: ");
+  // Serial.println(stream.bytes_written);
 }
 
 
@@ -246,8 +246,8 @@ void ProtobufBridge::sendForce(Force force)
 
   wrapMessageLength = stream.bytes_written;
 
-  Serial.print("Message Length wrapper: ");
-  Serial.println(stream.bytes_written);
+  // Serial.print("Message Length wrapper: ");
+  // Serial.println(stream.bytes_written);
 }
 
 
@@ -285,8 +285,8 @@ void ProtobufBridge::sendVesc(Vesc vesc)
 
   wrapMessageLength = stream.bytes_written;
 
-  Serial.print("Message Length wrapper: ");
-  Serial.println(stream.bytes_written);
+  // Serial.print("Message Length wrapper: ");
+  // Serial.println(stream.bytes_written);
 }
 
 
@@ -324,6 +324,6 @@ void ProtobufBridge::sendSetpoint(Setpoint setpoint)
 
   wrapMessageLength = stream.bytes_written;
 
-  Serial.print("Message Length wrapper: ");
-  Serial.println(stream.bytes_written);
+  // Serial.print("Message Length wrapper: ");
+  // Serial.println(stream.bytes_written);
 }

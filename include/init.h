@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <iostream>
 #include <WiFi.h>
-#include <TimeSync.h>
+#include <time.h>
 #include <ProtobufBridge.h>
 
 #include <stdio.h>
@@ -20,12 +20,12 @@ using namespace std;
 
 // Sensor and vesc include statements
 #define IMU 0
-#define WIND 0
+#define WIND 1
 #define POWER 0
 #define POWER_DUMP 0
 #define RPM_HALL 0
 #define TEMPERATURE 0
-#define FORCE 1
+#define FORCE 0
 
 #define HAS_VESC 0
 
@@ -96,17 +96,10 @@ uint8_t bufferTCP[128] = {0};
 const char *ssid = "kitexField"; // use kitexField
 const char *password = "morepower";
 // const char *addr = "192.168.8.144"; // black-pearl pi
-const char *addr = "192.168.8.107"; // Office laptop (make static if not already...)
+const char *addr = "192.168.8.126"; // Office laptop (make static if not already...)
 // const char *addr = "192.168.8.106"; // Andreas laptop
 
-// Time and udp setup
-IPAddress timeServerIP;
-unsigned int udpPortLocal = 2390;
-TimeSync timeSync;
-int64_t baseTime;
-int64_t sysTimeAtBaseTime;
-const uint32_t secondsUntilNewTime = 300;
-
+// send upd data
 IPAddress insertServerIP;
 unsigned int udpPortRemoteInsert = 10102;
 WiFiUDP udp;
