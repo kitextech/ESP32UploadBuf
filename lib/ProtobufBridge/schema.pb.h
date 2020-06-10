@@ -20,7 +20,9 @@ typedef enum _Wrapper_DataType {
     Wrapper_DataType_IMU = 2,
     Wrapper_DataType_POWER = 3,
     Wrapper_DataType_TEMPERATURE = 4,
-    Wrapper_DataType_WIND = 5
+    Wrapper_DataType_WIND = 5,
+    Wrapper_DataType_VESC = 6,
+    Wrapper_DataType_SETPOINT = 7
 } Wrapper_DataType;
 
 /* Struct definitions */
@@ -43,6 +45,12 @@ typedef struct _Quaternion {
     float w;
 } Quaternion;
 
+typedef struct _Setpoint {
+    int64_t time;
+    float RPM;
+    float current;
+} Setpoint;
+
 typedef struct _Speed {
     int64_t time;
     float RPM;
@@ -58,6 +66,19 @@ typedef struct _Vector3 {
     float y;
     float z;
 } Vector3;
+
+typedef struct _Vesc {
+    int64_t time;
+    float avgMotorCurrent;
+    float avgInputCurrent;
+    float dutyCycleNow;
+    int32_t rpm;
+    float inpVoltage;
+    float ampHours;
+    float ampHoursCharged;
+    int32_t tachometer;
+    int32_t tachometerAbs;
+} Vesc;
 
 typedef struct _Wind {
     int64_t time;
@@ -83,8 +104,8 @@ typedef struct _Imu {
 
 /* Helper constants for enums */
 #define _Wrapper_DataType_MIN Wrapper_DataType_SPEED
-#define _Wrapper_DataType_MAX Wrapper_DataType_WIND
-#define _Wrapper_DataType_ARRAYSIZE ((Wrapper_DataType)(Wrapper_DataType_WIND+1))
+#define _Wrapper_DataType_MAX Wrapper_DataType_SETPOINT
+#define _Wrapper_DataType_ARRAYSIZE ((Wrapper_DataType)(Wrapper_DataType_SETPOINT+1))
 
 
 /* Initializer values for message structs */
@@ -97,6 +118,8 @@ typedef struct _Imu {
 #define Wind_init_default                        {0, 0, 0}
 #define Vector3_init_default                     {0, 0, 0}
 #define Quaternion_init_default                  {0, 0, 0, 0}
+#define Vesc_init_default                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+#define Setpoint_init_default                    {0, 0, 0}
 #define Wrapper_init_zero                        {_Wrapper_DataType_MIN, {{NULL}, NULL}}
 #define Speed_init_zero                          {0, 0}
 #define Force_init_zero                          {0, 0, 0}
@@ -106,6 +129,8 @@ typedef struct _Imu {
 #define Wind_init_zero                           {0, 0, 0}
 #define Vector3_init_zero                        {0, 0, 0}
 #define Quaternion_init_zero                     {0, 0, 0, 0}
+#define Vesc_init_zero                           {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+#define Setpoint_init_zero                       {0, 0, 0}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define Force_time_tag                           1
@@ -118,6 +143,9 @@ typedef struct _Imu {
 #define Quaternion_y_tag                         2
 #define Quaternion_z_tag                         3
 #define Quaternion_w_tag                         4
+#define Setpoint_time_tag                        1
+#define Setpoint_RPM_tag                         2
+#define Setpoint_current_tag                     3
 #define Speed_time_tag                           1
 #define Speed_RPM_tag                            2
 #define Temperature_time_tag                     1
@@ -125,6 +153,16 @@ typedef struct _Imu {
 #define Vector3_x_tag                            1
 #define Vector3_y_tag                            2
 #define Vector3_z_tag                            3
+#define Vesc_time_tag                            1
+#define Vesc_avgMotorCurrent_tag                 2
+#define Vesc_avgInputCurrent_tag                 3
+#define Vesc_dutyCycleNow_tag                    4
+#define Vesc_rpm_tag                             5
+#define Vesc_inpVoltage_tag                      6
+#define Vesc_ampHours_tag                        7
+#define Vesc_ampHoursCharged_tag                 8
+#define Vesc_tachometer_tag                      9
+#define Vesc_tachometerAbs_tag                   10
 #define Wind_time_tag                            1
 #define Wind_speed_tag                           2
 #define Wind_direction_tag                       3
@@ -201,6 +239,27 @@ X(a, STATIC,   SINGULAR, FLOAT,    w,                 4)
 #define Quaternion_CALLBACK NULL
 #define Quaternion_DEFAULT NULL
 
+#define Vesc_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, INT64,    time,              1) \
+X(a, STATIC,   SINGULAR, FLOAT,    avgMotorCurrent,   2) \
+X(a, STATIC,   SINGULAR, FLOAT,    avgInputCurrent,   3) \
+X(a, STATIC,   SINGULAR, FLOAT,    dutyCycleNow,      4) \
+X(a, STATIC,   SINGULAR, INT32,    rpm,               5) \
+X(a, STATIC,   SINGULAR, FLOAT,    inpVoltage,        6) \
+X(a, STATIC,   SINGULAR, FLOAT,    ampHours,          7) \
+X(a, STATIC,   SINGULAR, FLOAT,    ampHoursCharged,   8) \
+X(a, STATIC,   SINGULAR, INT32,    tachometer,        9) \
+X(a, STATIC,   SINGULAR, INT32,    tachometerAbs,    10)
+#define Vesc_CALLBACK NULL
+#define Vesc_DEFAULT NULL
+
+#define Setpoint_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, INT64,    time,              1) \
+X(a, STATIC,   SINGULAR, FLOAT,    RPM,               2) \
+X(a, STATIC,   SINGULAR, FLOAT,    current,           3)
+#define Setpoint_CALLBACK NULL
+#define Setpoint_DEFAULT NULL
+
 extern const pb_msgdesc_t Wrapper_msg;
 extern const pb_msgdesc_t Speed_msg;
 extern const pb_msgdesc_t Force_msg;
@@ -210,6 +269,8 @@ extern const pb_msgdesc_t Temperature_msg;
 extern const pb_msgdesc_t Wind_msg;
 extern const pb_msgdesc_t Vector3_msg;
 extern const pb_msgdesc_t Quaternion_msg;
+extern const pb_msgdesc_t Vesc_msg;
+extern const pb_msgdesc_t Setpoint_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define Wrapper_fields &Wrapper_msg
@@ -221,6 +282,8 @@ extern const pb_msgdesc_t Quaternion_msg;
 #define Wind_fields &Wind_msg
 #define Vector3_fields &Vector3_msg
 #define Quaternion_fields &Quaternion_msg
+#define Vesc_fields &Vesc_msg
+#define Setpoint_fields &Setpoint_msg
 
 /* Maximum encoded size of messages (where known) */
 /* Wrapper_size depends on runtime parameters */
@@ -232,6 +295,8 @@ extern const pb_msgdesc_t Quaternion_msg;
 #define Wind_size                                21
 #define Vector3_size                             15
 #define Quaternion_size                          20
+#define Vesc_size                                74
+#define Setpoint_size                            21
 
 #ifdef __cplusplus
 } /* extern "C" */

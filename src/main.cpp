@@ -1,341 +1,407 @@
-#include <Arduino.h>
-#include "msg.pb.h"
-#include "schema.pb.h"
-#include "pb_common.h"
-#include "pb.h"
-#include "pb_encode.h"
+#include "init.h"
 
-#include <WiFi.h>
-#include <WiFiUdp.h> // NTC
+// void getTime()
+// {
+//   Serial.println("I shall now fetch the time!");
+//   baseTime = timeSync.getTime(timeServerIP, udp);
+//   sysTimeAtBaseTime = int64_t(millis());
+// }
 
+int64_t newLocalTime()
+{
+  struct timeval tv_now;
+  gettimeofday(&tv_now, NULL);
+  return (int64_t)tv_now.tv_sec * 1000000L + (int64_t)tv_now.tv_usec;
+}
 
-const char* ssid     = "kitex";
-const char* password = "morepower";
+#if HAS_VESC
+Vesc prepareVescData()
+{
+  Vesc vescData = Vesc_init_zero;
+  vescData.time = newLocalTime();
+  vescData.avgMotorCurrent = vesc.data.avgMotorCurrent;
+  vescData.avgInputCurrent = vesc.data.avgInputCurrent;
+  vescData.dutyCycleNow = vesc.data.dutyCycleNow;
+  vescData.rpm = vesc.data.rpm;
+  vescData.inpVoltage = vesc.data.inpVoltage;
+  vescData.ampHours = vesc.data.ampHours;
+  vescData.ampHoursCharged = vesc.data.ampHoursCharged;
+  vescData.tachometer = vesc.data.tachometer;
+  vescData.tachometerAbs = vesc.data.tachometerAbs;
+  return vescData;
+}
 
-uint8_t buffer[128];
-size_t imuMessageLength;
-size_t wrapMessageLength;
-uint8_t bufferWrapper[512];
+Setpoint prepareSetPoint(float rpm_sp)
+{
+  Setpoint setpointData Setpoint_init_zero;
+  setpointData.time = newLocalTime();
+  setpointData.RPM = rpm_sp;
+  setpointData.current = 0;
+  return setpointData;
+}
 
-WiFiClient client;
+/*void sendVescDataAtFrequency()
+{
+  if (int(millis()) - t0_Vesc >= (1000 / uploadFreqVesc))
+  {
+    vesc.getVescValues();
 
-const char* addr     = "192.168.8.126";
-const uint16_t port  = 1337;
+    float error = vesc.data.rpm - rpmSetpoint;
+    pidSUM += error * (1 / uploadFreqVesc);
 
+    if (pidSUM > 10000)
+    {
+      pidSUM = 10000;
+    }
+    if (pidSUM < -10000)
+    {
+      pidSUM = -10000;
+    }
 
+    float current_sp = -1 * (0.001 * error + 0.0002 * pidSUM);
+    if (current_sp > maxCurrent)
+    {
+      current_sp = maxCurrent;
+    }
+    if (current_sp < minCurrent)
+    {
+      current_sp = minCurrent;
+    }
 
-// NTC
+    vesc.setCurrent(current_sp);
 
-struct parsedTime {
-  int hour;
-  int minute;
-  int second;
-  uint16_t milisecond;
+    Vesc vescData = prepareVescData();
+    protobufBridge.sendVesc(vescData);
+    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+    udp.endPacket();
+
+    Setpoint setpointData = prepareSetPoint(current_sp);
+    protobufBridge.sendSetpoint(setpointData);
+    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+    udp.endPacket();
+    
+    t0_Vesc = millis();
+  }
+}*/
+
+int mode(int a[],int n) {
+   int maxValue = 0, maxCount = 0, i, j;
+
+   for (i = 0; i < n; ++i) {
+      int count = 0;
+      
+      for (j = 0; j < n; ++j) {
+         if (a[j] == a[i])
+         ++count;
+      }
+      
+      if (count > maxCount) {
+         maxCount = count;
+         maxValue = a[i];
+      }
+   }
+
+   return maxValue;
+}
+
+void updateArray(int newElement, int n)
+{
+  for (int i = n-1; i > 0; --i) {
+    rpmSetpointArray[i] = rpmSetpointArray[i-1] ;
+  } 
+  rpmSetpointArray[0] = newElement;
+}
+
+void readAndSetRPMByTCP(WiFiClient client)
+{
+  if (client)
+  {
+    while (client.connected())
+    {
+      if (client.available() > 0)
+      {
+        client.read(bufferTCP, 1);
+        // String str = String("Message length (bytes): ") + (bufferTCP[0]);
+        // Serial.println(str);
+
+        int msg_length = bufferTCP[0];
+
+        client.read(bufferTCP, bufferTCP[0]);
+        Speed message = Speed_init_zero;
+        pb_istream_t stream = pb_istream_from_buffer(bufferTCP, msg_length);
+        bool status = pb_decode(&stream, Speed_fields, &message);
+
+        if (!status)
+        {
+          Serial.printf("Decoding failed: %s\n", PB_GET_ERROR(&stream));
+        }
+        else
+        {
+          updateArray((int)(message.RPM), MODE_ARRAY_LENGTH);
+          if (message.RPM == mode(rpmSetpointArray, MODE_ARRAY_LENGTH) && message.RPM != rpmSetpoint)
+          {
+            Serial.printf("RPM is set to %d\n", (int)message.RPM);  
+            rpmDiff = message.RPM - (float)rpmSetpoint;
+            t0_ramp = millis();
+            rpmSetpoint = (float)mode(rpmSetpointArray, MODE_ARRAY_LENGTH);
+          }
+        }
+      }
+      return;
+    }
+  }
+}
+
+void setRPMByTCP()
+{
+  if (int(millis()) - t0_Vesc >= (1000 / uploadFreqVesc))
+  {
+    vesc.getVescValues();
+    if (t0_ramp + rampingTime > millis())
+      rpm_sp = (float(millis()) - float(t0_ramp)) / rampingTime * rpmDiff + ((float)rpmSetpoint - rpmDiff);
+    else
+      rpm_sp = rpmSetpoint;
+    Serial.printf("RPM: %f\n", rpm_sp);  
+    vesc.setRPM(rpm_sp);
+
+    Vesc vescData = prepareVescData();
+    protobufBridge.sendVesc(vescData);
+    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+    udp.endPacket();
+
+    Setpoint setpointData = prepareSetPoint(rpm_sp);
+    protobufBridge.sendSetpoint(setpointData);
+    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+    udp.endPacket();
+    
+    t0_Vesc = millis();
+  }
+}
+#endif
+
+enum SendDataType
+{
+  sendRpmHall,
+  sendForce,
+  sendPower,
+  sendImu,
+  sendTemperature,
+  sendWind,
+  sendVesc
 };
 
-struct parsedTime Ptime;
-
-IPAddress timeServerIP;
-WiFiUDP udp;
-
-const int   NTP_PACKET_SIZE = 48;
-const char* ntpServerName = "dk.pool.ntp.org"; //"time.nist.gov";
-byte        packetBuffer[ NTP_PACKET_SIZE];
-unsigned int localPort = 2390; 
-
-int64_t baseTime;
-int64_t sysTimeAtBaseTime;
-
-
-// send an NTP request to the time server at the given address
-unsigned long sendNTPpacket(IPAddress& address)
+void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency, int i=0)
 {
-  // Serial.println("sending NTP packet...");
-  // set all bytes in the buffer to 0
-  memset(packetBuffer, 0, NTP_PACKET_SIZE);
-  // Initialize values needed to form NTP request
-  // (see URL above for details on the packets)
-  packetBuffer[0] = 0b11100011;   // LI, Version, Mode
-  packetBuffer[1] = 0;     // Stratum, or type of clock
-  packetBuffer[2] = 6;     // Polling Interval
-  packetBuffer[3] = 0xEC;  // Peer Clock Precision
-  // 8 bytes of zero for Root Delay & Root Dispersion
-  packetBuffer[12]  = 49;
-  packetBuffer[13]  = 0x4E;
-  packetBuffer[14]  = 49;
-  packetBuffer[15]  = 52;
-
-  // all NTP fields have been given values, now
-  // you can send a packet requesting a timestamp:
-  udp.beginPacket(address, 123); //NTP requests are to port 123
-  udp.write(packetBuffer, NTP_PACKET_SIZE);
-  udp.endPacket();
-}
-
-int64_t Parse(struct parsedTime *timeStruct, byte* packet){
-   // make the POSIX time
-   unsigned long highWord = word(packet[40], packet[41]);
-   unsigned long lowWord  = word(packet[42], packet[43]);
-   unsigned long secsSince1900 = highWord << 16 | lowWord;
-   // convert to NTP time
-   const unsigned long seventyYears = 2208988800UL; 
-   unsigned long epoch = secsSince1900 - seventyYears;
-   // get the hour,minute,seconds
-    timeStruct->hour   = (epoch % 86400L) / 3600;         
-    timeStruct->minute = (epoch % 3600) / 60;
-    timeStruct->second = (epoch % 60);
-    // get the fraction of seconds 
-    // https://arduino.stackexchange.com/questions/49567/synching-local-clock-usign-ntp-to-milliseconds
-    uint32_t frac  = (uint32_t) packetBuffer[44] << 24
-                   | (uint32_t) packetBuffer[45] << 16
-                   | (uint32_t) packetBuffer[46] <<  8
-                   | (uint32_t) packetBuffer[47] <<  0;
-    timeStruct->milisecond = ((uint64_t) frac * 1000 ) >> 32;
-
-
-    return int64_t( int64_t(epoch) * int64_t(1000) + int64_t( timeStruct->milisecond ) );
-}
-
-
-int64_t getTime() {
-  WiFi.hostByName(ntpServerName, timeServerIP);
-  sendNTPpacket(timeServerIP); // send an NTP packet to a time server
-  delay(500);
-  int cb = udp.parsePacket();
-  if (!cb) {
-    Serial.println("no packet yet");
+  if (int(millis()) - t0 >= (1000 / uploadFrequency))
+  {
+    switch (sendDataType)
+    {
+    case sendRpmHall:
+    {
+#if RPM_HALL
+      Speed rpmData = hallSensor.prepareData(newLocalTime());
+      protobufBridge.sendSpeed(rpmData);
+#endif
+      break;
+    }
+    case sendImu:
+    {
+#if IMU
+      Imu imuData = imuSensor.prepareData(newLocalTime());
+      protobufBridge.sendIMU(imuData);
+#endif
+      break;
+    }
+    case sendTemperature:
+    {
+#if TEMPERATURE
+      Temperature temperatureData = temperatureSensor.prepareData(newLocalTime());
+      protobufBridge.sendTemperature(temperatureData);
+#endif
+      break;
+    }
+    case sendWind:
+    {
+#if WIND
+      Wind windData = windSensor.prepareData(newLocalTime());
+      protobufBridge.sendWind(windData);
+#endif
+      break;
+    }
+    case sendPower:
+    {
+#if POWER
+      Power powerData = powerSensor.prepareData(newLocalTime());
+      protobufBridge.sendPower(powerData);
+#endif
+      break;
+    }
+    case sendForce:
+    {
+#if FORCE
+      Force forceData = forceSensors[i].prepareData(newLocalTime());
+      protobufBridge.sendForce(forceData);
+#endif
+    break;
+    }
+    default:
+      break;
+    }
+    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+    udp.endPacket();
+    t0 = millis();
   }
-  else {
-   udp.read(packetBuffer, NTP_PACKET_SIZE);
-  int64_t time = Parse(&Ptime, packetBuffer);
-  // print in serial port 
-  Serial.print (Ptime.hour);
-  Serial.print (":");
-  Serial.print (Ptime.minute);
-  Serial.print (":");
-  Serial.print (Ptime.second);
-  Serial.print (":");
-  Serial.println (Ptime.milisecond);   
-  
-  return time;
+  else if (int(millis()) - t0 >= (1000 / (uploadFrequency * 2)))
+  {
+    digitalWrite(LED_PIN, LOW);
   }
-  Serial.println ( "PROBLEM!");   
-  return 0;
+  else
+  {
+    digitalWrite(LED_PIN, HIGH);
+  }
 }
 
-// WebSocketsClient webSocket;
+#if HAS_VESC
 
-// void hexdump(const void *mem, uint32_t len, uint8_t cols = 16) {
-// 	const uint8_t* src = (const uint8_t*) mem;
-// 	Serial.printf("\n[HEXDUMP] Address: 0x%08X len: 0x%X (%d)", (ptrdiff_t)src, len, len);
-// 	for(uint32_t i = 0; i < len; i++) {
-// 		if(i % cols == 0) {
-// 			Serial.printf("\n[0x%08X] 0x%08X: ", (ptrdiff_t)src, i);
-// 		}
-// 		Serial.printf("%02X ", *src);
-// 		src++;
-// 	}
-// 	Serial.printf("\n");
-// }
+#endif
 
-// void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
-
-// 	switch(type) {
-// 		case WStype_DISCONNECTED:
-// 			Serial.printf("[WSc] Disconnected!\n");
-// 			break;
-// 		case WStype_CONNECTED:
-// 			Serial.printf("[WSc] Connected to url: %s\n", payload);
-
-// 			// send message to server when Connected
-// 			webSocket.sendTXT("Connected");
-// 			break;
-// 		case WStype_TEXT:
-// 			Serial.printf("[WSc] get text: %s\n", payload);
-
-// 			// send message to server
-// 			// webSocket.sendTXT("message here");
-// 			break;
-// 		case WStype_BIN:
-// 			Serial.printf("[WSc] get binary length: %u\n", length);
-// 			hexdump(payload, length);
-
-// 			// send data to server
-// 			// webSocket.sendBIN(payload, length);
-// 			break;
-// 		case WStype_ERROR:
-//       Serial.println("some Error");
-// 		case WStype_FRAGMENT_TEXT_START:
-// 		case WStype_FRAGMENT_BIN_START:
-// 		case WStype_FRAGMENT:
-// 		case WStype_FRAGMENT_FIN:
-// 			break;
-// 	}
-// }
-
-void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(115200);
+void setup()
+{
+  Serial.begin(115200); // USB to computer
   Serial.setDebugOutput(true);
+  while (!Serial)
+  {
+    ;
+  }
+
+#if HAS_VESC
+  SerialVesc.begin(115200, SERIAL_8N1, 16, 17);
+  vesc.setSerialPort(&SerialVesc);
+// Serial1.begin(115200);  // rx/tx pins of ESP32 (for the vesc)
+// vesc.setSerialPort(&Serial1);
+#endif
+
+#if POWER_DUMP
+  powerSensor.PowerDumpSetup();
+#endif
+
+  pinMode(LED_PIN, OUTPUT);
 
   delay(10);
 
   // We start by connecting to a WiFi network
-
   Serial.println();
   Serial.println();
   Serial.print("Connecting to ");
   Serial.println(ssid);
 
+  WiFi.mode(WIFI_STA); // Necessary?
   WiFi.begin(ssid, password);
 
-  while (WiFi.status() != WL_CONNECTED) {
-      delay(500);
-      Serial.print(".");
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    Serial.print(".");
   }
 
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
+  Serial.printf("\nWiFi connected. IP address: ");
   Serial.println(WiFi.localIP());
 
+#if HAS_VESC
+  server.begin(); // TCP
+// delay(1000);
+// client = server.available();
+#endif
 
-  // // server address, port and URL
-	// webSocket.begin("192.168.8.126", 81, "/");
-
-	// // event handler
-	// webSocket.onEvent(webSocketEvent);
-
-	// // use HTTP Basic Authorization this is optional remove if not needed
-	// webSocket.setAuthorization("user", "Password");
-
-	// // try ever 5000 again if connection has failed
-	// webSocket.setReconnectInterval(5000);
-
+  WiFi.hostByName(addr, insertServerIP); // Define IPAddress object with the ip address string
 
   // NTC
-   // connect to udp 
-    Serial.println("Starting UDP");
-    udp.begin(localPort);
-    Serial.print("Local port: ");
-    // Serial.println(up);
+  // connect to udp_time
+  // Serial.println("Starting UDP");
+  // udp.begin(udpPortLocal);
+  // Serial.print("Local port: ");
 
-    baseTime = getTime();
-    sysTimeAtBaseTime = int64_t(millis());
 
-    // delay(100000);
+  configTzTime("0", addr); // https://github.com/espressif/arduino-esp32/issues/1114 & https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/system_time.html
+
+  while (newLocalTime() < 1e6*60*24*365) {
+    Serial.print("Get time from "); Serial.println(addr);
+    delay(1000);
+  }
+ 
+
+
+#if WIND
+  windSensor.setupWindDirEncoder();
+#endif
+#if IMU
+  imuSensor.setup();
+#endif
+#if RPM_HALL
+  hallSensor.setup();
+#endif
+#if FORCE
+  for (int i=0; i < (sizeof(forceSensors)/sizeof(*forceSensors)); i++)
+  {
+    Serial.println(i);
+    forceSensors[i].setup();
+  }
+#endif
 }
 
-
-int64_t getNewTime() {
-  return baseTime - sysTimeAtBaseTime + int64_t(millis());
-}
-
-bool write_imuBuffer(pb_ostream_t *stream, const pb_field_iter_t *field, void * const *arg)
+void loop()
 {
-    //char *str = "Hello world!";
-    
-    if (!pb_encode_tag_for_field(stream, field))
-        return false;
-    
-    return pb_encode_string(stream, (uint8_t*) &buffer, imuMessageLength);
-}
+  digitalWrite(LED_PIN, LOW);
 
-float random() {
-  return float(random(0, 100))/100.0;
-}
-
-void prepareIMUData() {
-  pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
-
-  Quaternion orientation = Quaternion_init_zero; // or {1,0,0,1}
-  orientation.x = random();
-  orientation.y = random();
-  orientation.z = random();
-  orientation.w = random();
-
-  Vector3 acc = {random(), random(), random()};
-  Vector3 gyro = {random(), random(), random()};
-
-  Imu imu = Imu_init_zero;
-  imu.has_acc = true;
-  imu.acc = acc;
-  imu.has_gyro = true;
-  imu.gyro = gyro;
-  imu.has_orientation = true;
-  imu.orientation = orientation;
-  imu.time = getNewTime();
-
-  // write IMU data
-  bool status = pb_encode(&stream, Imu_fields, &imu);
- 
-  if (!status)
+  if (WiFi.status() != WL_CONNECTED)
   {
-      Serial.println("Failed to encode imu");
-      return;
-  }
- 
-  // Serial.print("Message Length imu: ");
-  // Serial.println(stream.bytes_written);
-  imuMessageLength = stream.bytes_written;
-  
-
-  stream = pb_ostream_from_buffer(bufferWrapper, sizeof(bufferWrapper));
-
-  // wrapper
-  Wrapper wrap = Wrapper_init_zero;
-  wrap.type = Wrapper_DataType_IMU;
-  wrap.data.funcs.encode = &write_imuBuffer;
-
-  status = pb_encode(&stream, Wrapper_fields, &wrap);
- 
-  if (!status)
-  {
-      Serial.println("Failed to encode wrapper");
-      return;
-  }
-
-  wrapMessageLength = stream.bytes_written;
-
-  // Serial.print("Message Length wrapper: ");
-  Serial.println(stream.bytes_written);
- 
-  // Serial.print("Message wrapper: ");
- 
-  // for(int i = 0; i<stream.bytes_written; i++){
-  //   Serial.printf("%02X",bufferWrapper[i]);
-  // }
-
-  // Serial.println();
-}
-
-
-void loop() {
-  // put your main code here, to run repeatedly:
-
-  digitalWrite(LED_BUILTIN, LOW);
-  //Serial.print("connecting to ");
-  //Serial.println(addr);
-
-  
-
-  if (!client.connected()) {
-    client.connect(addr, port);
-    Serial.println("connection failed");
-    Serial.println("wait 5 sec to reconnect...");
+    Serial.println("Connection failed, wait 5 sec...");
     delay(5000);
-    return;
   }
+  else
+  {
+    #if WIND
+    sendDataAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
+    #endif
+    #if IMU
+    sendDataAtFrequency(sendImu, imuSensor.t0, imuSensor.t0);
+    #endif
+    #if POWER && !POWER_DUMP
+    sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
+    #endif
+    #if POWER && POWER_DUMP
+    sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
+    powerSensor.PowerControl();
+    #endif
+    #if RPM_HALL
+    sendDataAtFrequency(sendRpmHall, hallSensor.t0, hallSensor.uploadFrequency);      
+    #endif
+    #if TEMPERATURE
+    sendDataAtFrequency(sendTemperature, temperatureSensor.t0, temperatureSensor.uploadFrequency);
+    #endif
+    #if FORCE
+    for (int i=0; i < (sizeof(forceSensors)/sizeof(*forceSensors)); i++)
+    {
+      // Serial.println(i);
+      sendDataAtFrequency(sendForce, forceSensors[i].t0, forceSensors[i].uploadFrequency, i);
+    }
+    #endif
 
-  prepareIMUData();
-
-  client.write(bufferWrapper, wrapMessageLength);
-  digitalWrite(LED_BUILTIN, HIGH);
-
-  delay(20);
-  // Serial.println(".");
-
-  // prepareIMUData();
-  // webSocket.sendBIN( bufferWrapper, wrapMessageLength);
-  
+    #if HAS_VESC
+    if (!client.connected()) // client = the TCP client who's going to send us something
+    {
+      client = server.available();
+    }
+    readAndSetRPMByTCP(client);
+    // sendVescDataAtFrequency();
+    setRPMByTCP();
+    #endif
+  }
+  Serial.printf("time: %lld\n", newLocalTime());
+  delay(1000);
 }

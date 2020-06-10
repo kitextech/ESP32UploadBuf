@@ -33,5 +33,11 @@ PB_BIND(Vector3, Vector3, AUTO)
 PB_BIND(Quaternion, Quaternion, AUTO)
 
 
+PB_BIND(Vesc, Vesc, AUTO)
+
+
+PB_BIND(Setpoint, Setpoint, AUTO)
+
+
 
 
