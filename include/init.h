@@ -20,12 +20,13 @@ using namespace std;
 
 // Sensor and vesc include statements
 #define IMU 0
-#define WIND 1
+#define WIND 0
 #define POWER 0
 #define POWER_DUMP 0
 #define RPM_HALL 0
 #define TEMPERATURE 0
 #define FORCE 0
+#define OLED 1
 
 #define HAS_VESC 0
 
@@ -61,6 +62,10 @@ ForceSensor forceSensors[] = {
     ForceSensor(2, A11, A12, -9.462e-005, 1.444, 10),
     ForceSensor(3, A9, A10, -9.332e-005, -0.7352, 10)
 };
+#endif
+#if OLED
+#include <Oled.h>
+Oled oled(5);
 #endif
 
 #if HAS_VESC

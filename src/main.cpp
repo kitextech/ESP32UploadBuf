@@ -191,7 +191,8 @@ enum SendDataType
   sendImu,
   sendTemperature,
   sendWind,
-  sendVesc
+  sendVesc,
+  sendOled
 };
 
 void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency, int i=0)
@@ -245,6 +246,13 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
 #if FORCE
       Force forceData = forceSensors[i].prepareData(newLocalTime());
       protobufBridge.sendForce(forceData);
+#endif
+    break;
+    }
+    case sendOled:
+    {
+#if OLED
+      oled.displayTime(newLocalTime());
 #endif
     break;
     }
@@ -352,6 +360,9 @@ void setup()
     forceSensors[i].setup();
   }
 #endif
+#if OLED
+  oled.setup();
+#endif
 }
 
 void loop()
@@ -391,6 +402,9 @@ void loop()
       sendDataAtFrequency(sendForce, forceSensors[i].t0, forceSensors[i].uploadFrequency, i);
     }
     #endif
+    #if OLED
+      sendDataAtFrequency(sendOled, oled.t0, oled.updateFrequency);
+    #endif
 
     #if HAS_VESC
     if (!client.connected()) // client = the TCP client who's going to send us something
@@ -402,6 +416,6 @@ void loop()
     setRPMByTCP();
     #endif
   }
-  Serial.printf("time: %lld\n", newLocalTime());
-  delay(1000);
+  // Serial.printf("time: %lld\n", newLocalTime());
+  // delay(1000);
 }
