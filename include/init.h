@@ -9,25 +9,20 @@
 #include "./pb_decode.h"
 #include "schema.pb.h"
 
-#include <PID_v1.h>
-
-#include <queue>
-#include <list>
-
 using namespace std; 
 
 #define LED_PIN 0
 
 // Sensor and vesc include statements
 #define IMU 0
-#define WIND 1
+#define WIND 0
 #define POWER 0
 #define POWER_DUMP 0
 #define RPM_HALL 0
 #define TEMPERATURE 0
 #define FORCE 0
 
-#define HAS_VESC 0
+#define HAS_VESC 1
 
 #if IMU
 #include <ImuSensor.h>
@@ -81,6 +76,7 @@ float rpm_sp = 0.0;
 float maxCurrent = 5;
 float minCurrent = -45;
 float rpmSetpoint = 0.0;
+float rampAcc = 1.4;   // RPM/ms^2
 
 int rpmSetpointArray[MODE_ARRAY_LENGTH] = {0}; 
 
@@ -96,7 +92,7 @@ uint8_t bufferTCP[128] = {0};
 const char *ssid = "kitexField"; // use kitexField
 const char *password = "morepower";
 // const char *addr = "192.168.8.144"; // black-pearl pi
-const char *addr = "192.168.8.126"; // Office laptop (make static if not already...)
+const char *addr = "192.168.8.107"; // Office laptop (make static if not already...)
 // const char *addr = "192.168.8.106"; // Andreas laptop
 
 // send upd data
