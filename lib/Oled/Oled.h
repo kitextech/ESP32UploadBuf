@@ -13,6 +13,8 @@ public:
 
   void setup();
   void displayTime(int64_t time);
+  void displayIP(const char *addr);
+  void displayWifi(const char *ssid);
 
   int t0;
   uint16_t updateFrequency;

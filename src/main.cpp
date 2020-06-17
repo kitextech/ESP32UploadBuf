@@ -287,16 +287,19 @@ void setup()
     ;
   }
 
-#if HAS_VESC
-  SerialVesc.begin(115200, SERIAL_8N1, 16, 17);
-  vesc.setSerialPort(&SerialVesc);
-// Serial1.begin(115200);  // rx/tx pins of ESP32 (for the vesc)
-// vesc.setSerialPort(&Serial1);
-#endif
+  #if HAS_VESC
+    SerialVesc.begin(115200, SERIAL_8N1, 16, 17);
+    vesc.setSerialPort(&SerialVesc);
+  // Serial1.begin(115200);  // rx/tx pins of ESP32 (for the vesc)
+  // vesc.setSerialPort(&Serial1);
+  #endif
 
-#if POWER_DUMP
-  powerSensor.PowerDumpSetup();
-#endif
+  #if POWER_DUMP
+    powerSensor.PowerDumpSetup();
+  #endif
+  #if OLED
+    oled.setup();
+  #endif
 
   pinMode(LED_PIN, OUTPUT);
 
@@ -315,16 +318,36 @@ void setup()
   {
     delay(500);
     Serial.print(".");
+    #if OLED
+    oled.displayWifi(ssid);
+    #endif
   }
 
   Serial.printf("\nWiFi connected. IP address: ");
   Serial.println(WiFi.localIP());
 
-#if HAS_VESC
-  server.begin(); // TCP
-// delay(1000);
-// client = server.available();
-#endif
+  #if HAS_VESC
+    server.begin(); // TCP
+  // delay(1000);
+  // client = server.available();
+  #endif
+
+  #if WIND
+    windSensor.setupWindDirEncoder();
+  #endif
+  #if IMU
+    imuSensor.setup();
+  #endif
+  #if RPM_HALL
+    hallSensor.setup();
+  #endif
+  #if FORCE
+    for (int i=0; i < (sizeof(forceSensors)/sizeof(*forceSensors)); i++)
+    {
+      Serial.println(i);
+      forceSensors[i].setup();
+    }
+  #endif
 
   WiFi.hostByName(addr, insertServerIP); // Define IPAddress object with the ip address string
 
@@ -338,31 +361,13 @@ void setup()
   configTzTime("0", addr); // https://github.com/espressif/arduino-esp32/issues/1114 & https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/system_time.html
 
   while (newLocalTime() < 1e6*60*24*365) {
-    Serial.print("Get time from "); Serial.println(addr);
+    Serial.print("Get time from "); 
+    Serial.println(addr);
     delay(1000);
+    #if OLED
+    oled.displayIP(addr);
+    #endif
   }
- 
-
-
-#if WIND
-  windSensor.setupWindDirEncoder();
-#endif
-#if IMU
-  imuSensor.setup();
-#endif
-#if RPM_HALL
-  hallSensor.setup();
-#endif
-#if FORCE
-  for (int i=0; i < (sizeof(forceSensors)/sizeof(*forceSensors)); i++)
-  {
-    Serial.println(i);
-    forceSensors[i].setup();
-  }
-#endif
-#if OLED
-  oled.setup();
-#endif
 }
 
 void loop()
