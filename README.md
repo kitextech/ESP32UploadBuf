@@ -1,5 +1,4 @@
 # ESP32UploadBuf
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ## Description
 At KiteX, we are developing a new type of ultra lightweight wind turbine. This repository contains the firmware for the microcontrollers used for data collection and control of the turbine. The idea is to have an efficient IoT setup that allows synchronized time-series data collection from multiple sources. The data is stored in an InfluxDB 2.0 database and accessed via Grafana.
 
@@ -39,3 +38,6 @@ The development platform (Espressif 32) and framework (Arduino) are defined in `
 The data is formatted using protocol buffers. To that end, the project specific `ProtobufBridge` library is used. The library contains a send function for each of the protobuf message types defined in the `pb.c` and `pb.h` files. If you wish to add a message template  (e.g. for another sensor type), you will need to generate new `.pb.h` and `.pb.c` files. These can be generated from a `.proto` file using [a modified version](https://github.com/kitextech/ESPNanopb) of the [nanopb library](https://github.com/nanopb/nanopb)  which contains the messages used in this project.
 
 The sensor modules are located in the `lib` folder, and each of them includes a function `prepareData()` which collects the data and creates the protobuf message from it. The protobuff messages are sent to the server via UDP in `main.cpp` at frequencies defined upon creation of the sensor objects in the `init.h` file.
+
+## License
+The parts of this repository created by us MIT-licensed. **However, when you build the code it may or may not be combined by default with GPL-licensed code in included libraries; hence the GPL terms may apply.** Alternatively you could replace or remove the GPL-licensed library dependencies.
