@@ -26,7 +26,7 @@ using namespace std;
 
 #if IMU
 #include <ImuSensor.h>
-ImuSensor imuSensor(5);
+ImuSensor imuSensor(40);
 #endif
 #if WIND
 #include <WindSensor.h>
@@ -51,9 +51,9 @@ TemperatureSensor temperatureSensor(1, A0, 10000, 25, 3950, 10000);
 #if FORCE
 #include <ForceSensor.h>
 ForceSensor forceSensors[] = {
-    ForceSensor(1, A1, A0, -9.479e-005, -0.3162, 10),
-    ForceSensor(2, A11, A12, -9.462e-005, 1.444, 10),
-    ForceSensor(3, A9, A10, -9.332e-005, -0.7352, 10)
+    ForceSensor(1, A1, A0, -9.479e-005, -0.3162, 40),
+    ForceSensor(2, A11, A12, -9.462e-005, 1.444, 40),
+    ForceSensor(3, A9, A10, -9.332e-005, -0.7352, 40)
 };
 #endif
 

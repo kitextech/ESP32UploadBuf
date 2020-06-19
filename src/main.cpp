@@ -324,7 +324,7 @@ void loop()
     sendDataAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
     #endif
     #if IMU
-    sendDataAtFrequency(sendImu, imuSensor.t0, imuSensor.t0);
+    sendDataAtFrequency(sendImu, imuSensor.t0, imuSensor.uploadFrequency);
     #endif
     #if POWER && !POWER_DUMP
     sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);

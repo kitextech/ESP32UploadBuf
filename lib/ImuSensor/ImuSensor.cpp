@@ -1,6 +1,6 @@
 #include "ImuSensor.h"
 
-ImuSensor::ImuSensor(int uploadFreq)
+ImuSensor::ImuSensor(uint16_t uploadFreq)
 {
   uploadFrequency = uploadFreq;
   t0 = millis();

@@ -11,7 +11,7 @@
 class ImuSensor
 {
   public:
-    ImuSensor(int uploadFreq);
+    ImuSensor(uint16_t uploadFreq);
     Imu prepareData(int64_t time);
     void setup();
     
