@@ -1,33 +1,23 @@
 # ESP32UploadBuf
-
 ## Description
-The overall purpose is to have an efficient IoT setup that allows synchronized time-series data collection from multiple sources using ESP's. The data is then stored in an InfluxDB 2.0 database and accessed via Grafana.
+At KiteX, we are developing a new type of ultra lightweight wind turbine. This repository contains the firmware for the microcontrollers used for data collection and control of the turbine. The idea is to have an efficient IoT setup that allows synchronized time-series data collection from multiple sources. The data is stored in an InfluxDB 2.0 database and accessed via Grafana.
 
-This repository contains a shared codebase for several microcontrollers that share common functionality (data logging to the same server) but serve different functions. Specific ESP examples included:
-* Collect wind speed and direction data
-* Collect data from load cells
-* Collect temperature data
-* Collect IMU data
-* Control an [ESC](https://en.wikipedia.org/wiki/Electronic_speed_control) and log data from it
-* *etc*.
+This drone footage from [one of our latest tests](https://www.linkedin.com/feed/update/urn:li:activity:6676809609837121536) shows the turbine in action. At this stage, we are actively controlling the RPM from a laptop.
 
-Shared functionality:
-* Connect to the same InfluxDB server on the same WiFi network
-* Encode the collected data using [Protocol Buffers](https://developers.google.com/protocol-buffers)
-* Send the data using a UDP socket
-* Sync time-series data using a common time server
+![](https://github.com/kitextech/ESP32UploadBuf/blob/readme/kitex-twt.gif?raw=true)
+
+The image below shows an overview of the system. [You can find the server and laptop side of the system here.](https://github.com/kitextech/openTWTLogging)
 
 ![](https://github.com/kitextech/ESP32UploadBuf/blob/readme/esp32uploadbuf.png)
 
-[The server-side repository is available here.
-](https://github.com/kitextech/openTWTLogging)
+Functionalities of the present firmware include:
+* Collect data from a variety of sensors (load cells, IMU etc.)
+* Sync time-series data using a common time server
+* Encode the data via [Protocol Buffers](https://developers.google.com/protocol-buffers)
+* Upload the data to an InfluxDB 2.0 server using a UDP socket
+* Receive RPM setpoint values over TCP and send them to an ESC
 
-This project is based on [this IoT project by Vladimir Vivien](https://medium.com/grpc/efficient-iot-with-the-esp8266-protocol-buffers-grafana-go-and-kubernetes-a2ae214dbd29), and we recommend you read the writeup as it explains many of the core principles. The main differences between this project and Vivien's are:
-
-1. This project supports using the same firmware for multiple ESP's that need to communicate with the same server
-2. Instead of TCP, UDP is used for uploading data
-3. We use esp32's instead of an esp8266
-4. TCP is implemented for server --> client communication for e.g controlling an actuator from the server
+This project is based on [this IoT project by Vladimir Vivien](https://medium.com/grpc/efficient-iot-with-the-esp8266-protocol-buffers-grafana-go-and-kubernetes-a2ae214dbd29), and we recommend you read the writeup as it explains many of the core principles.
 
 ## Prerequisites
 The project uses the Espressif 32 development platform and the Arduino framework. In order to build it you will need to [use Platform IO, which is available as an extension for VS Code and CLion](https://docs.platformio.org/en/latest/integration/ide/pioide.html). If you don't wish to install the IDE/extension, you can use the command-line interface ([click here to see an example](https://github.com/platformio/platform-espressif32/blob/master/examples/arduino-blink/README.rst)).
@@ -50,8 +40,6 @@ The data is formatted using protocol buffers. To that end, the project specific 
 The sensor modules are located in the `lib` folder, and each of them includes a function `prepareData()` which collects the data and creates the protobuf message from it. The protobuff messages are sent to the server via UDP in `main.cpp` at frequencies defined upon creation of the sensor objects in the `init.h` file.
 
 ## Directory structure
-The basic directory structure is defined by Platform IO:
-
 ```bash
 ├───.pio
 │   ├───build
@@ -75,4 +63,4 @@ The basic directory structure is defined by Platform IO:
 ```
 
 ## License
-Maybe this one? [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
