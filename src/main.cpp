@@ -40,52 +40,6 @@ Setpoint prepareSetPoint(float rpm_sp)
   return setpointData;
 }
 
-/*void sendVescDataAtFrequency()
-{
-  if (int(millis()) - t0_Vesc >= (1000 / uploadFreqVesc))
-  {
-    vesc.getVescValues();
-
-    float error = vesc.data.rpm - rpmSetpoint;
-    pidSUM += error * (1 / uploadFreqVesc);
-
-    if (pidSUM > 10000)
-    {
-      pidSUM = 10000;
-    }
-    if (pidSUM < -10000)
-    {
-      pidSUM = -10000;
-    }
-
-    float current_sp = -1 * (0.001 * error + 0.0002 * pidSUM);
-    if (current_sp > maxCurrent)
-    {
-      current_sp = maxCurrent;
-    }
-    if (current_sp < minCurrent)
-    {
-      current_sp = minCurrent;
-    }
-
-    vesc.setCurrent(current_sp);
-
-    Vesc vescData = prepareVescData();
-    protobufBridge.sendVesc(vescData);
-    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
-    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-    udp.endPacket();
-
-    Setpoint setpointData = prepareSetPoint(current_sp);
-    protobufBridge.sendSetpoint(setpointData);
-    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
-    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-    udp.endPacket();
-    
-    t0_Vesc = millis();
-  }
-}*/
-
 int mode(int a[],int n) {
    int maxValue = 0, maxCount = 0, i, j;
 
@@ -145,6 +99,7 @@ void readAndSetRPMByTCP(WiFiClient client)
             Serial.printf("RPM is set to %d\n", (int)message.RPM);  
             rpmDiff = message.RPM - (float)rpmSetpoint;
             t0_ramp = millis();
+            rampingTime = abs((int)(rpmDiff * 1.0/rampAcc));
             rpmSetpoint = (float)mode(rpmSetpointArray, MODE_ARRAY_LENGTH);
           }
         }
@@ -402,6 +357,4 @@ void loop()
     setRPMByTCP();
     #endif
   }
-  // Serial.printf("time: %lld\n", newLocalTime());
-  // delay(1000);
 }
