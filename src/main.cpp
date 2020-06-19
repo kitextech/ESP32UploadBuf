@@ -369,7 +369,7 @@ void loop()
     sendDataAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
     #endif
     #if IMU
-    sendDataAtFrequency(sendImu, imuSensor.t0, imuSensor.t0);
+    sendDataAtFrequency(sendImu, imuSensor.t0, imuSensor.uploadFrequency);
     #endif
     #if POWER && !POWER_DUMP
     sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
@@ -402,6 +402,6 @@ void loop()
     setRPMByTCP();
     #endif
   }
-  Serial.printf("time: %lld\n", newLocalTime());
-  delay(1000);
+  // Serial.printf("time: %lld\n", newLocalTime());
+  // delay(1000);
 }
