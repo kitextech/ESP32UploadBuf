@@ -22,8 +22,7 @@ using namespace std;
 #define TEMPERATURE 0
 #define FORCE 0
 #define OLED 0
-
-#define HAS_VESC 1
+#define VESC 1
 
 #if IMU
 #include <ImuSensor.h>
@@ -61,36 +60,11 @@ ForceSensor forceSensors[] = {
 #include <Oled.h>
 Oled oled(5);
 #endif
-
-#if HAS_VESC
+#if VESC
 #include <VescControl.h>
 VescControl vescControl(30);
 
-// #include <HardwareSerial.h>
-// #include <VescUart.h>
-
-// #define MODE_ARRAY_LENGTH 5
-
-// HardwareSerial SerialVesc(2);
-// VescUart vesc;
-// int t0_Vesc = millis();
-// int uploadFreqVesc = 30;
-// int t0_ramp;
-// float rpmDiff;
-// int rampingTime = 3000;
-// float rpm_sp = 0.0;
-
-// float maxCurrent = 5;
-// float minCurrent = -45;
-// float rpmSetpoint = 0.0;
-// float rampAcc = 1.4;   // RPM/ms^2
-
-// int rpmSetpointArray[MODE_ARRAY_LENGTH] = {0}; 
-
-// float pidSUM = 0;
-
 int tcpPort = 10101;
-
 WiFiServer server(tcpPort);
 WiFiClient client = server.available();
 // uint8_t bufferTCP[128] = {0};

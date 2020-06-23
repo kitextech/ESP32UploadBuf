@@ -105,25 +105,7 @@ void VescControl::updateRpmSetpoint(WiFiClient client)
   }
 }
 
-void VescControl::setRpm(int64_t time, WiFiUDP udp, IPAddress insertServerIP)
-{
-  if (int(millis()) - t0 >= (1000 / uploadFrequency))
-  {
-    vesc.getVescValues();
-    if (t0_ramp + rampingTime > millis())
-      rpm_sp = (float(millis()) - float(t0_ramp)) / rampingTime * rpmDiff + ((float)rpmSetpoint - rpmDiff);
-    else
-      rpm_sp = rpmSetpoint;
-    Serial.printf("RPM: %f\n", rpm_sp);  
-    vesc.setRPM(rpm_sp);
-
-    // sendData(time, udp, insertServerIP);
-    
-    t0 = millis();
-  }
-}
-
-void VescControl::setRpm2()
+void VescControl::setRpm()
 {
     vesc.getVescValues();
     if (t0_ramp + rampingTime > millis())
@@ -133,20 +115,3 @@ void VescControl::setRpm2()
     Serial.printf("RPM: %f\n", rpm_sp);  
     vesc.setRPM(rpm_sp);
 }
-
-
-
-// void VescControl::sendData(int64_t time, ProtobufBridgeWiFiUDP udp, IPAddress insertServerIP)
-// {
-//     Vesc vescData = prepareVescData(time);
-//     protobufBridge.sendVesc(vescData);
-//     udp.beginPacket(insertServerIP, udpPortRemoteInsert);
-//     udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-//     udp.endPacket();
-
-//     Setpoint setpointData = prepareSetPointData(time, rpm_sp);
-//     protobufBridge.sendSetpoint(setpointData);
-//     udp.beginPacket(insertServerIP, udpPortRemoteInsert);
-//     udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-//     udp.endPacket();
-// }

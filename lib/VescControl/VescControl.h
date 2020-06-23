@@ -8,8 +8,6 @@
 #include <WiFi.h>
 #include <ProtobufBridge.h>
 
-// #include <iostream>
-// #include <stdio.h>
 #include "./pb_encode.h"
 #include "./pb_decode.h"
 
@@ -25,9 +23,7 @@ public:
   int mode(int a[], int n);
   void updateArray(int newElement, int n);
   void updateRpmSetpoint(WiFiClient client);
-  void setRpm(int64_t time, WiFiUDP udp, IPAddress insertServerIP);
-  void setRpm2();
-  void sendData(int64_t time, float rpm_sp, WiFiUDP udp, IPAddress insertServerIP);
+  void setRpm();
 
   int t0;
   uint16_t uploadFrequency;
@@ -42,14 +38,10 @@ public:
   int rpmSetpointArray[MODE_ARRAY_LENGTH] = {0};
   float pidSUM = 0;
 
-  int tcpPort = 10101;
-  // WiFiServer server{tcpPort};
-
 private:
   uint8_t modeArrayLength;
   HardwareSerial SerialVesc{2};
   VescUart vesc;
-
   uint8_t bufferTCP[128] = {0};
 };
 #endif
