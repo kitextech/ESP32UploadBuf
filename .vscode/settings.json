@@ -11,6 +11,8 @@
         "initializer_list": "cpp",
         "list": "cpp",
         "*.tcc": "cpp",
-        "random": "cpp"
+        "random": "cpp",
+        "cmath": "cpp",
+        "cstdlib": "cpp"
     }
 }

@@ -1,42 +1,42 @@
 #include "PowerSensor.h"
 
 // multi-inputs constructor
-PowerSensor::PowerSensor(uint8_t numSamples, uint8_t voltagePin, uint8_t currentPin,
-                         float b1, float m1, float b2, float m2, float bV, float mV, float bC, float mC,
-                         uint16_t uploadFrequency)
+PowerSensor::PowerSensor(uint8_t numSamples_, uint8_t voltagePin_, uint8_t currentPin_,
+                         float b1_, float m1_, float b2_, float m2_, float bV_, float mV_, float bC_, float mC_,
+                         uint16_t uploadFrequency_)
 {
   Serial.println("Created a power sensor");
-  numSamples = numSamples;
-  voltagePin = voltagePin;
-  currentPin = currentPin;
-  b1 = b1;
-  m1 = m1;
-  b2 = b2;
-  m2 = m2;
-  bV = bV;
-  mV = mV;
-  bC = bC;
-  mC = mC;
-  uploadFrequency = uploadFrequency;
+  numSamples = numSamples_;
+  voltagePin = voltagePin_;
+  currentPin = currentPin_;
+  b1 = b1_;
+  m1 = m1_;
+  b2 = b2_;
+  m2 = m2_;
+  bV = bV_;
+  mV = mV_;
+  bC = bC_;
+  mC = mC_;
+  uploadFrequency = uploadFrequency_;
   t0 = millis();
 }
-PowerSensor::PowerSensor(uint8_t numSamples, uint8_t voltagePin, uint8_t currentPin,
-                         float b1, float m1, float b2, float m2, float bV, float mV, float bC, float mC,
-                         uint16_t uploadFrequency, float minVolt, float maxVolt, uint8_t dumpPin1, uint8_t dumpPin2, uint8_t dumpPin3, uint8_t dumpPin4)
+PowerSensor::PowerSensor(uint8_t nSamples, uint8_t vPin, uint8_t cPin,
+                         float b1_, float m1_, float b2_, float m2_, float bV_, float mV_, float bC_, float mC_,
+                         uint16_t uploadFrequency_, float minVolt, float maxVolt, uint8_t dumpPin1, uint8_t dumpPin2, uint8_t dumpPin3, uint8_t dumpPin4)
 {
   Serial.println("Created a power sensor");
-  numSamples = numSamples;
-  voltagePin = voltagePin;
-  currentPin = currentPin;
-  b1 = b1;
-  m1 = m1;
-  b2 = b2;
-  m2 = m2;
-  bV = bV;
-  mV = mV;
-  bC = bC;
-  mC = mC;
-  uploadFrequency = uploadFrequency;
+  numSamples = nSamples;
+  voltagePin = vPin;
+  currentPin = cPin;
+  b1 = b1_;
+  m1 = m1_;
+  b2 = b2_;
+  m2 = m2_;
+  bV = bV_;
+  mV = mV_;
+  bC = bC_;
+  mC = mC_;
+  uploadFrequency = uploadFrequency_;
   BatMinVolt = minVolt;
   BatMaxVolt = maxVolt;
   DigitalPin1 = dumpPin1;
@@ -49,6 +49,7 @@ PowerSensor::PowerSensor(uint8_t numSamples, uint8_t voltagePin, uint8_t current
 
 Power PowerSensor::prepareData(int64_t time)
 {
+
   Power data = Power_init_zero;
   data.time = time;
 
@@ -102,21 +103,26 @@ void PowerSensor::PowerDumpSetup()
   pinMode(DigitalPin3, OUTPUT);
   pinMode(DigitalPin4, OUTPUT);
   Serial.println("Successfully set up the output pins for Power Dump system");
+  Serial.println(DigitalPin1);
+  Serial.println(DigitalPin2);
+  Serial.println(DigitalPin3);
+  Serial.println(DigitalPin4);
 }
+
 void PowerSensor::PowerControl()
 {
   if (voltage > BatMaxVolt)
-  {
-    digitalWrite(DigitalPin1, HIGH);
-    digitalWrite(DigitalPin2, HIGH);
-    digitalWrite(DigitalPin3, HIGH);
-    digitalWrite(DigitalPin4, HIGH);
-  }
-  if (voltage < BatMinVolt)
   {
     digitalWrite(DigitalPin1, LOW);
     digitalWrite(DigitalPin2, LOW);
     digitalWrite(DigitalPin3, LOW);
     digitalWrite(DigitalPin4, LOW);
+  }
+  if (voltage < BatMinVolt)
+  {
+    digitalWrite(DigitalPin1, HIGH);
+    digitalWrite(DigitalPin2, HIGH);
+    digitalWrite(DigitalPin3, HIGH);
+    digitalWrite(DigitalPin4, HIGH);
   }
 }
