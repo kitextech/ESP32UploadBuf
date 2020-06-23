@@ -259,18 +259,13 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
     default:
       break;
     }
-    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
-    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-    udp.endPacket();
+    if (sendDataType != sendOled)
+    {
+      udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+      udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+      udp.endPacket();
+    }
     t0 = millis();
-  }
-  else if (int(millis()) - t0 >= (1000 / (uploadFrequency * 2)))
-  {
-    digitalWrite(LED_PIN, LOW);
-  }
-  else
-  {
-    digitalWrite(LED_PIN, HIGH);
   }
 }
 
