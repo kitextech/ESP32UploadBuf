@@ -21,9 +21,9 @@ using namespace std;
 #define RPM_HALL 0
 #define TEMPERATURE 0
 #define FORCE 0
-#define OLED 1
+#define OLED 0
 
-#define HAS_VESC 0
+#define HAS_VESC 1
 
 #if IMU
 #include <ImuSensor.h>
@@ -63,33 +63,37 @@ Oled oled(5);
 #endif
 
 #if HAS_VESC
-#include <HardwareSerial.h>
-#include <VescUart.h>
+#include <VescControl.h>
+VescControl vescControl(30);
 
-#define MODE_ARRAY_LENGTH 5
+// #include <HardwareSerial.h>
+// #include <VescUart.h>
 
-HardwareSerial SerialVesc(2);
-VescUart vesc;
-int t0_Vesc = millis();
-int uploadFreqVesc = 30;
-int t0_ramp;
-float rpmDiff;
-int rampingTime = 3000;
-float rpm_sp = 0.0;
+// #define MODE_ARRAY_LENGTH 5
 
-float maxCurrent = 5;
-float minCurrent = -45;
-float rpmSetpoint = 0.0;
-float rampAcc = 1.4;   // RPM/ms^2
+// HardwareSerial SerialVesc(2);
+// VescUart vesc;
+// int t0_Vesc = millis();
+// int uploadFreqVesc = 30;
+// int t0_ramp;
+// float rpmDiff;
+// int rampingTime = 3000;
+// float rpm_sp = 0.0;
 
-int rpmSetpointArray[MODE_ARRAY_LENGTH] = {0}; 
+// float maxCurrent = 5;
+// float minCurrent = -45;
+// float rpmSetpoint = 0.0;
+// float rampAcc = 1.4;   // RPM/ms^2
 
-float pidSUM = 0;
+// int rpmSetpointArray[MODE_ARRAY_LENGTH] = {0}; 
+
+// float pidSUM = 0;
 
 int tcpPort = 10101;
+
 WiFiServer server(tcpPort);
 WiFiClient client = server.available();
-uint8_t bufferTCP[128] = {0};
+// uint8_t bufferTCP[128] = {0};
 #endif
 
 // WiFi

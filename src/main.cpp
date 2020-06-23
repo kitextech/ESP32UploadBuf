@@ -1,12 +1,5 @@
 #include "init.h"
 
-// void getTime()
-// {
-//   Serial.println("I shall now fetch the time!");
-//   baseTime = timeSync.getTime(timeServerIP, udp);
-//   sysTimeAtBaseTime = int64_t(millis());
-// }
-
 int64_t newLocalTime()
 {
   struct timeval tv_now;
@@ -15,130 +8,130 @@ int64_t newLocalTime()
 }
 
 #if HAS_VESC
-Vesc prepareVescData()
-{
-  Vesc vescData = Vesc_init_zero;
-  vescData.time = newLocalTime();
-  vescData.avgMotorCurrent = vesc.data.avgMotorCurrent;
-  vescData.avgInputCurrent = vesc.data.avgInputCurrent;
-  vescData.dutyCycleNow = vesc.data.dutyCycleNow;
-  vescData.rpm = vesc.data.rpm;
-  vescData.inpVoltage = vesc.data.inpVoltage;
-  vescData.ampHours = vesc.data.ampHours;
-  vescData.ampHoursCharged = vesc.data.ampHoursCharged;
-  vescData.tachometer = vesc.data.tachometer;
-  vescData.tachometerAbs = vesc.data.tachometerAbs;
-  return vescData;
-}
+// Vesc prepareVescData()
+// {
+//   Vesc vescData = Vesc_init_zero;
+//   vescData.time = newLocalTime();
+//   vescData.avgMotorCurrent = vesc.data.avgMotorCurrent;
+//   vescData.avgInputCurrent = vesc.data.avgInputCurrent;
+//   vescData.dutyCycleNow = vesc.data.dutyCycleNow;
+//   vescData.rpm = vesc.data.rpm;
+//   vescData.inpVoltage = vesc.data.inpVoltage;
+//   vescData.ampHours = vesc.data.ampHours;
+//   vescData.ampHoursCharged = vesc.data.ampHoursCharged;
+//   vescData.tachometer = vesc.data.tachometer;
+//   vescData.tachometerAbs = vesc.data.tachometerAbs;
+//   return vescData;
+// }
 
-Setpoint prepareSetPoint(float rpm_sp)
-{
-  Setpoint setpointData Setpoint_init_zero;
-  setpointData.time = newLocalTime();
-  setpointData.RPM = rpm_sp;
-  setpointData.current = 0;
-  return setpointData;
-}
+// Setpoint prepareSetPoint(float rpm_sp)
+// {
+//   Setpoint setpointData Setpoint_init_zero;
+//   setpointData.time = newLocalTime();
+//   setpointData.RPM = rpm_sp;
+//   setpointData.current = 0;
+//   return setpointData;
+// }
 
-int mode(int a[],int n) {
-   int maxValue = 0, maxCount = 0, i, j;
+// int mode(int a[],int n) {
+//    int maxValue = 0, maxCount = 0, i, j;
 
-   for (i = 0; i < n; ++i) {
-      int count = 0;
+//    for (i = 0; i < n; ++i) {
+//       int count = 0;
       
-      for (j = 0; j < n; ++j) {
-         if (a[j] == a[i])
-         ++count;
-      }
+//       for (j = 0; j < n; ++j) {
+//          if (a[j] == a[i])
+//          ++count;
+//       }
       
-      if (count > maxCount) {
-         maxCount = count;
-         maxValue = a[i];
-      }
-   }
+//       if (count > maxCount) {
+//          maxCount = count;
+//          maxValue = a[i];
+//       }
+//    }
 
-   return maxValue;
-}
+//    return maxValue;
+// }
 
-void updateArray(int newElement, int n)
-{
-  for (int i = n-1; i > 0; --i) {
-    rpmSetpointArray[i] = rpmSetpointArray[i-1] ;
-  } 
-  rpmSetpointArray[0] = newElement;
-}
+// void updateArray(int newElement, int n)
+// {
+//   for (int i = n-1; i > 0; --i) {
+//     rpmSetpointArray[i] = rpmSetpointArray[i-1] ;
+//   } 
+//   rpmSetpointArray[0] = newElement;
+// }
 
-void readAndSetRPMByTCP(WiFiClient client)
-{
-  if (client)
-  {
-    while (client.connected())
-    {
-      if (client.available() > 0)
-      {
-        client.read(bufferTCP, 1);
-        // String str = String("Message length (bytes): ") + (bufferTCP[0]);
-        // Serial.println(str);
+// void readAndSetRPMByTCP(WiFiClient client)
+// {
+//   if (client)
+//   {
+//     while (client.connected())
+//     {
+//       if (client.available() > 0)
+//       {
+//         client.read(bufferTCP, 1);
+//         // String str = String("Message length (bytes): ") + (bufferTCP[0]);
+//         // Serial.println(str);
 
-        int msg_length = bufferTCP[0];
+//         int msg_length = bufferTCP[0];
 
-        client.read(bufferTCP, bufferTCP[0]);
-        Speed message = Speed_init_zero;
-        pb_istream_t stream = pb_istream_from_buffer(bufferTCP, msg_length);
-        bool status = pb_decode(&stream, Speed_fields, &message);
+//         client.read(bufferTCP, bufferTCP[0]);
+//         Speed message = Speed_init_zero;
+//         pb_istream_t stream = pb_istream_from_buffer(bufferTCP, msg_length);
+//         bool status = pb_decode(&stream, Speed_fields, &message);
 
-        if (!status)
-        {
-          Serial.printf("Decoding failed: %s\n", PB_GET_ERROR(&stream));
-        }
-        else
-        {
-          updateArray((int)(message.RPM), MODE_ARRAY_LENGTH);
-          if (message.RPM == mode(rpmSetpointArray, MODE_ARRAY_LENGTH) && message.RPM != rpmSetpoint)
-          {
-            Serial.printf("RPM is set to %d\n", (int)message.RPM);  
-            rpmDiff = message.RPM - (float)rpmSetpoint;
-            t0_ramp = millis();
-            rampingTime = abs((int)(rpmDiff * 1.0/rampAcc));
-            rpmSetpoint = (float)mode(rpmSetpointArray, MODE_ARRAY_LENGTH);
-          }
-        }
-      }
-      return;
-    }
-  }
-}
+//         if (!status)
+//         {
+//           Serial.printf("Decoding failed: %s\n", PB_GET_ERROR(&stream));
+//         }
+//         else
+//         {
+//           updateArray((int)(message.RPM), MODE_ARRAY_LENGTH);
+//           if (message.RPM == mode(rpmSetpointArray, MODE_ARRAY_LENGTH) && message.RPM != rpmSetpoint)
+//           {
+//             Serial.printf("RPM is set to %d\n", (int)message.RPM);  
+//             rpmDiff = message.RPM - (float)rpmSetpoint;
+//             t0_ramp = millis();
+//             rampingTime = abs((int)(rpmDiff * 1.0/rampAcc));
+//             rpmSetpoint = (float)mode(rpmSetpointArray, MODE_ARRAY_LENGTH);
+//           }
+//         }
+//       }
+//       return;
+//     }
+//   }
+// }
 
-void setRPMByTCP()
-{
-  if (int(millis()) - t0_Vesc >= (1000 / uploadFreqVesc))
-  {
-    vesc.getVescValues();
-    if (t0_ramp + rampingTime > millis())
-      rpm_sp = (float(millis()) - float(t0_ramp)) / rampingTime * rpmDiff + ((float)rpmSetpoint - rpmDiff);
-    else
-      rpm_sp = rpmSetpoint;
-    Serial.printf("RPM: %f\n", rpm_sp);  
-    vesc.setRPM(rpm_sp);
+// void setRPMByTCP()
+// {
+//   if (int(millis()) - t0_Vesc >= (1000 / uploadFreqVesc))
+//   {
+//     vesc.getVescValues();
+//     if (t0_ramp + rampingTime > millis())
+//       rpm_sp = (float(millis()) - float(t0_ramp)) / rampingTime * rpmDiff + ((float)rpmSetpoint - rpmDiff);
+//     else
+//       rpm_sp = rpmSetpoint;
+//     Serial.printf("RPM: %f\n", rpm_sp);  
+//     vesc.setRPM(rpm_sp);
 
-    Vesc vescData = prepareVescData();
-    protobufBridge.sendVesc(vescData);
-    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
-    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-    udp.endPacket();
+//     Vesc vescData = prepareVescData();
+//     protobufBridge.sendVesc(vescData);
+//     udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+//     udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+//     udp.endPacket();
 
-    Setpoint setpointData = prepareSetPoint(rpm_sp);
-    protobufBridge.sendSetpoint(setpointData);
-    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
-    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-    udp.endPacket();
+//     Setpoint setpointData = prepareSetPoint(rpm_sp);
+//     protobufBridge.sendSetpoint(setpointData);
+//     udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+//     udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+//     udp.endPacket();
     
-    t0_Vesc = millis();
-  }
-}
+//     t0_Vesc = millis();
+//   }
+// }
 #endif
 
-enum SendDataType
+enum pleaseDo
 {
   sendRpmHall,
   sendForce,
@@ -146,15 +139,15 @@ enum SendDataType
   sendImu,
   sendTemperature,
   sendWind,
-  sendVesc,
-  sendOled
+  controlVesc,
+  updateOled
 };
 
-void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency, int i=0)
+void doAtFrequency(pleaseDo whatYouHaveToDo, int &t0, int uploadFrequency, int i=0)
 {
   if (int(millis()) - t0 >= (1000 / uploadFrequency))
   {
-    switch (sendDataType)
+    switch (whatYouHaveToDo)
     {
     case sendRpmHall:
     {
@@ -202,24 +195,42 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
       Force forceData = forceSensors[i].prepareData(newLocalTime());
       protobufBridge.sendForce(forceData);
 #endif
-    break;
+      break;
     }
-    case sendOled:
+#if HAS_VESC
+    case controlVesc:
+    {
+      vescControl.setRpm2();
+
+      Vesc vescData = vescControl.prepareVescData(newLocalTime());
+      protobufBridge.sendVesc(vescData);
+      udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+      udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+      udp.endPacket();
+
+      Setpoint setpointData = vescControl.prepareSetpointData(newLocalTime());
+      protobufBridge.sendSetpoint(setpointData);
+      udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+      udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+      udp.endPacket();
+      break;
+    }
+#endif
+    case updateOled:
     {
 #if OLED
       oled.displayTime(newLocalTime());
 #endif
-    break;
+      break;
     }
     default:
       break;
     }
-    if (sendDataType != sendOled)
-    {
-      udp.beginPacket(insertServerIP, udpPortRemoteInsert);
-      udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-      udp.endPacket();
-    }
+#if (!OLED && !HAS_VESC)
+    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+    udp.endPacket();
+#endif
     t0 = millis();
   }
 }
@@ -238,8 +249,9 @@ void setup()
   }
 
   #if HAS_VESC
-    SerialVesc.begin(115200, SERIAL_8N1, 16, 17);
-    vesc.setSerialPort(&SerialVesc);
+    vescControl.setup();
+    // SerialVesc.begin(115200, SERIAL_8N1, 16, 17);
+    // vesc.setSerialPort(&SerialVesc);
   // Serial1.begin(115200);  // rx/tx pins of ESP32 (for the vesc)
   // vesc.setSerialPort(&Serial1);
   #endif
@@ -332,33 +344,33 @@ void loop()
   else
   {
     #if WIND
-    sendDataAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
+    doAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
     #endif
     #if IMU
-    sendDataAtFrequency(sendImu, imuSensor.t0, imuSensor.uploadFrequency);
+    doAtFrequency(sendImu, imuSensor.t0, imuSensor.uploadFrequency);
     #endif
     #if POWER && !POWER_DUMP
-    sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
+    doAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
     #endif
     #if POWER && POWER_DUMP
-    sendDataAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
+    doAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
     powerSensor.PowerControl();
     #endif
     #if RPM_HALL
-    sendDataAtFrequency(sendRpmHall, hallSensor.t0, hallSensor.uploadFrequency);      
+    doAtFrequency(sendRpmHall, hallSensor.t0, hallSensor.uploadFrequency);      
     #endif
     #if TEMPERATURE
-    sendDataAtFrequency(sendTemperature, temperatureSensor.t0, temperatureSensor.uploadFrequency);
+    doAtFrequency(sendTemperature, temperatureSensor.t0, temperatureSensor.uploadFrequency);
     #endif
     #if FORCE
     for (int i=0; i < (sizeof(forceSensors)/sizeof(*forceSensors)); i++)
     {
       // Serial.println(i);
-      sendDataAtFrequency(sendForce, forceSensors[i].t0, forceSensors[i].uploadFrequency, i);
+      doAtFrequency(sendForce, forceSensors[i].t0, forceSensors[i].uploadFrequency, i);
     }
     #endif
     #if OLED
-      sendDataAtFrequency(sendOled, oled.t0, oled.updateFrequency);
+      doAtFrequency(updateOled, oled.t0, oled.updateFrequency);
     #endif
 
     #if HAS_VESC
@@ -366,9 +378,11 @@ void loop()
     {
       client = server.available();
     }
-    readAndSetRPMByTCP(client);
-    // sendVescDataAtFrequency();
-    setRPMByTCP();
+    vescControl.updateRpmSetpoint(client);
+    doAtFrequency(controlVesc, vescControl.t0, vescControl.uploadFrequency);
+    // vescControl.setRpm(newLocalTime(), udp);
+    // readAndSetRPMByTCP(client);
+    // setRPMByTCP();
     #endif
   }
   // Serial.printf("time: %lld\n", newLocalTime());
