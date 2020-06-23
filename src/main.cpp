@@ -146,7 +146,8 @@ enum SendDataType
   sendImu,
   sendTemperature,
   sendWind,
-  sendVesc
+  sendVesc,
+  sendOled
 };
 
 void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency, int i=0)
@@ -203,21 +204,23 @@ void sendDataAtFrequency(SendDataType sendDataType, int &t0, int uploadFrequency
 #endif
     break;
     }
+    case sendOled:
+    {
+#if OLED
+      oled.displayTime(newLocalTime());
+#endif
+    break;
+    }
     default:
       break;
     }
-    udp.beginPacket(insertServerIP, udpPortRemoteInsert);
-    udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-    udp.endPacket();
+    if (sendDataType != sendOled)
+    {
+      udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+      udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+      udp.endPacket();
+    }
     t0 = millis();
-  }
-  else if (int(millis()) - t0 >= (1000 / (uploadFrequency * 2)))
-  {
-    digitalWrite(LED_PIN, LOW);
-  }
-  else
-  {
-    digitalWrite(LED_PIN, HIGH);
   }
 }
 
@@ -234,16 +237,19 @@ void setup()
     ;
   }
 
-#if HAS_VESC
-  SerialVesc.begin(115200, SERIAL_8N1, 16, 17);
-  vesc.setSerialPort(&SerialVesc);
-// Serial1.begin(115200);  // rx/tx pins of ESP32 (for the vesc)
-// vesc.setSerialPort(&Serial1);
-#endif
+  #if HAS_VESC
+    SerialVesc.begin(115200, SERIAL_8N1, 16, 17);
+    vesc.setSerialPort(&SerialVesc);
+  // Serial1.begin(115200);  // rx/tx pins of ESP32 (for the vesc)
+  // vesc.setSerialPort(&Serial1);
+  #endif
 
-#if POWER_DUMP
-  powerSensor.PowerDumpSetup();
-#endif
+  #if POWER_DUMP
+    powerSensor.PowerDumpSetup();
+  #endif
+  #if OLED
+    oled.setup();
+  #endif
 
   pinMode(LED_PIN, OUTPUT);
 
@@ -262,16 +268,36 @@ void setup()
   {
     delay(500);
     Serial.print(".");
+    #if OLED
+    oled.displayWifi(ssid);
+    #endif
   }
 
   Serial.printf("\nWiFi connected. IP address: ");
   Serial.println(WiFi.localIP());
 
-#if HAS_VESC
-  server.begin(); // TCP
-// delay(1000);
-// client = server.available();
-#endif
+  #if HAS_VESC
+    server.begin(); // TCP
+  // delay(1000);
+  // client = server.available();
+  #endif
+
+  #if WIND
+    windSensor.setupWindDirEncoder();
+  #endif
+  #if IMU
+    imuSensor.setup();
+  #endif
+  #if RPM_HALL
+    hallSensor.setup();
+  #endif
+  #if FORCE
+    for (int i=0; i < (sizeof(forceSensors)/sizeof(*forceSensors)); i++)
+    {
+      Serial.println(i);
+      forceSensors[i].setup();
+    }
+  #endif
 
   WiFi.hostByName(addr, insertServerIP); // Define IPAddress object with the ip address string
 
@@ -285,28 +311,13 @@ void setup()
   configTzTime("0", addr); // https://github.com/espressif/arduino-esp32/issues/1114 & https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/system_time.html
 
   while (newLocalTime() < 1e6*60*24*365) {
-    Serial.print("Get time from "); Serial.println(addr);
+    Serial.print("Get time from "); 
+    Serial.println(addr);
     delay(1000);
+    #if OLED
+    oled.displayIP(addr);
+    #endif
   }
- 
-
-
-#if WIND
-  windSensor.setupWindDirEncoder();
-#endif
-#if IMU
-  imuSensor.setup();
-#endif
-#if RPM_HALL
-  hallSensor.setup();
-#endif
-#if FORCE
-  for (int i=0; i < (sizeof(forceSensors)/sizeof(*forceSensors)); i++)
-  {
-    Serial.println(i);
-    forceSensors[i].setup();
-  }
-#endif
 }
 
 void loop()
@@ -346,6 +357,9 @@ void loop()
       sendDataAtFrequency(sendForce, forceSensors[i].t0, forceSensors[i].uploadFrequency, i);
     }
     #endif
+    #if OLED
+      sendDataAtFrequency(sendOled, oled.t0, oled.updateFrequency);
+    #endif
 
     #if HAS_VESC
     if (!client.connected()) // client = the TCP client who's going to send us something
@@ -357,4 +371,6 @@ void loop()
     setRPMByTCP();
     #endif
   }
+  // Serial.printf("time: %lld\n", newLocalTime());
+  // delay(1000);
 }

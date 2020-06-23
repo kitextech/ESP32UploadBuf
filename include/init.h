@@ -21,6 +21,7 @@ using namespace std;
 #define RPM_HALL 0
 #define TEMPERATURE 0
 #define FORCE 0
+#define OLED 1
 
 #define HAS_VESC 0
 
@@ -55,6 +56,10 @@ ForceSensor forceSensors[] = {
     ForceSensor(2, A11, A12, -9.462e-005, 1.444, 40),
     ForceSensor(3, A9, A10, -9.332e-005, -0.7352, 40)
 };
+#endif
+#if OLED
+#include <Oled.h>
+Oled oled(5);
 #endif
 
 #if HAS_VESC
