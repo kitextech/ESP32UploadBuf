@@ -21,9 +21,8 @@ using namespace std;
 #define RPM_HALL 0
 #define TEMPERATURE 0
 #define FORCE 0
-#define OLED 1
-
-#define HAS_VESC 0
+#define OLED 0
+#define VESC 1
 
 #if IMU
 #include <ImuSensor.h>
@@ -61,43 +60,21 @@ ForceSensor forceSensors[] = {
 #include <Oled.h>
 Oled oled(5);
 #endif
-
-#if HAS_VESC
-#include <HardwareSerial.h>
-#include <VescUart.h>
-
-#define MODE_ARRAY_LENGTH 5
-
-HardwareSerial SerialVesc(2);
-VescUart vesc;
-int t0_Vesc = millis();
-int uploadFreqVesc = 30;
-int t0_ramp;
-float rpmDiff;
-int rampingTime = 3000;
-float rpm_sp = 0.0;
-
-float maxCurrent = 5;
-float minCurrent = -45;
-float rpmSetpoint = 0.0;
-float rampAcc = 1.4;   // RPM/ms^2
-
-int rpmSetpointArray[MODE_ARRAY_LENGTH] = {0}; 
-
-float pidSUM = 0;
+#if VESC
+#include <VescControl.h>
+VescControl vescControl(30);
 
 int tcpPort = 10101;
 WiFiServer server(tcpPort);
 WiFiClient client = server.available();
-uint8_t bufferTCP[128] = {0};
+// uint8_t bufferTCP[128] = {0};
 #endif
 
 // WiFi
 const char *ssid = "kitexField"; // use kitexField
 const char *password = "morepower";
-// const char *addr = "192.168.8.144"; // black-pearl pi
-const char *addr = "192.168.8.107"; // Office laptop (make static if not already...)
-// const char *addr = "192.168.8.106"; // Andreas laptop
+// const char *addr = "192.168.8.152"; // Andreas' laptop on kitex
+const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
 
 // send upd data
 IPAddress insertServerIP;
