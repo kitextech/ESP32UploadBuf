@@ -34,7 +34,7 @@ public:
   float maxCurrent = 5;
   float minCurrent = -45;
   float rpmSetpoint = 0.0;
-  float rampAcc = 1.4; // RPM/ms^2
+  float rampAcc = .7; // RPM/ms^2
   int rpmSetpointArray[MODE_ARRAY_LENGTH] = {0};
   float pidSUM = 0;
 

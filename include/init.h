@@ -73,9 +73,8 @@ WiFiClient client = server.available();
 // WiFi
 const char *ssid = "kitexField"; // use kitexField
 const char *password = "morepower";
-// const char *addr = "192.168.8.144"; // black-pearl pi
-const char *addr = "192.168.8.107"; // Office laptop (make static if not already...)
-// const char *addr = "192.168.8.106"; // Andreas laptop
+// const char *addr = "192.168.8.152"; // Andreas' laptop on kitex
+const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
 
 // send upd data
 IPAddress insertServerIP;
