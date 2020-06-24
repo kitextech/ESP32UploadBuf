@@ -4,11 +4,11 @@ At KiteX, we are developing a new type of ultra lightweight wind turbine. This r
 
 This drone footage from [one of our latest tests](https://www.linkedin.com/feed/update/urn:li:activity:6676809609837121536) shows the turbine in action. At this stage, we are actively controlling the RPM from a laptop.
 
-![](https://github.com/kitextech/ESP32UploadBuf/blob/readme/kitex-twt.gif?raw=true)
+![](https://github.com/kitextech/ESP32UploadBuf/blob/master/kitex-twt.gif?raw=true)
 
 The image below shows an overview of the system. [You can find the server and laptop side of the system here.](https://github.com/kitextech/openTWTLogging)
 
-![](https://github.com/kitextech/ESP32UploadBuf/blob/readme/esp32uploadbuf.png)
+![](https://github.com/kitextech/ESP32UploadBuf/blob/master/esp32uploadbuf.png)
 
 Functionalities of the present firmware include:
 * Collect data from a variety of sensors (load cells, IMU etc.)
