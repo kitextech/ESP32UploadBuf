@@ -45,7 +45,7 @@ PowerSensor::PowerSensor(uint8_t nSamples, uint8_t vPin, uint8_t cPin,
   DigitalPin4 = dumpPin4;
 
   t0 = millis();
-};  // What's this semicolon doing here?
+}; // What's this semicolon doing here?
 
 Power PowerSensor::prepareData(int64_t time)
 {
@@ -113,16 +113,16 @@ void PowerSensor::PowerControl()
 {
   if (voltage > BatMaxVolt)
   {
-    digitalWrite(DigitalPin1, LOW);
-    digitalWrite(DigitalPin2, LOW);
-    digitalWrite(DigitalPin3, LOW);
-    digitalWrite(DigitalPin4, LOW);
-  }
-  if (voltage < BatMinVolt)
-  {
     digitalWrite(DigitalPin1, HIGH);
     digitalWrite(DigitalPin2, HIGH);
     digitalWrite(DigitalPin3, HIGH);
     digitalWrite(DigitalPin4, HIGH);
+  }
+  if (voltage < BatMinVolt)
+  {
+    digitalWrite(DigitalPin1, LOW);
+    digitalWrite(DigitalPin2, LOW);
+    digitalWrite(DigitalPin3, LOW);
+    digitalWrite(DigitalPin4, LOW);
   }
 }
