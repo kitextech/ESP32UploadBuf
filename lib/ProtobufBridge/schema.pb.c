@@ -39,5 +39,9 @@ PB_BIND(Vesc, Vesc, AUTO)
 PB_BIND(Setpoint, Setpoint, AUTO)
 
 
+PB_BIND(BladeControl, BladeControl, AUTO)
+
+
+
 
 

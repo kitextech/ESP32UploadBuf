@@ -19,6 +19,12 @@ enum pleaseDo
   updateOled
 };
 
+// Limites the input. in Blade for the servos
+float limit(float value, float min, float max) {
+  return _min(_max(value, min), max);
+}
+
+
 void doAtFrequency(pleaseDo whatYouHaveToDo, int &t0, int uploadFrequency, int i = 0)
 {
   if (int(millis()) - t0 >= (1000 / uploadFrequency))
@@ -180,6 +186,27 @@ void setup()
   }
 #endif
 
+#if BLADE
+  // server.begin(); // TCP
+// delay(1000);
+// client = server.available();
+  Serial.println("Blade Setup");
+  Serial.print("Listen for UDP packages on port: ");
+  Serial.println(udpPortLocalRecieve);
+  udp.begin(udpPortLocalRecieve);
+
+  ESP32PWM::allocateTimer(0);
+	ESP32PWM::allocateTimer(1);
+	ESP32PWM::allocateTimer(2);
+	servo1.setPeriodHertz(50);      // Standard 50hz servo
+	servo2.setPeriodHertz(50);      // Standard 50hz servo
+	servo3.setPeriodHertz(50);      // Standard 50hz servo
+  servo1.attach(servo1Pin, minUs, maxUs);
+	servo2.attach(servo2Pin, minUs, maxUs);
+	servo3.attach(servo3Pin, minUs, maxUs);
+  
+#endif
+
   WiFi.hostByName(addr, insertServerIP); // Define IPAddress object with the ip address string
 
   // Setup time sync with server att address
@@ -246,6 +273,77 @@ void loop()
     vescControl.updateRpmSetpoint(client);
     doAtFrequency(controlVesc, vescControl.t0, vescControl.uploadFrequency);
 #endif
+
+#if BLADE
+    // if (!client.connected()) // client = the TCP client who's going to send us something
+    // {
+    //   client = server.available();
+    // }
+    // vescControl.updateRpmSetpoint(client);
+    // doAtFrequency(controlVesc, vescControl.t0, vescControl.uploadFrequency);
+
+    uint8_t buffer[128]; // could be initialised outside the loop!
+
+    udp.parsePacket();
+
+    int n = udp.read(buffer, 128);
+
+    if(n > 0){
+      Serial.print("Server to client: ");
+      Serial.println((char *)buffer);
+      int i;
+      for (i = 0; i < n; i++)
+      {
+          if (i > 0) printf(":");
+          printf("%02X", buffer[i]);
+      }
+      printf("\n");
+
+      Serial.printf("time: %lld\n", newLocalTime());
+
+      // // decode the buffer
+      // Wrapper message = Wrapper_init_zero;
+      // pb_istream_t stream = pb_istream_from_buffer(buffer, 128);
+      // bool status = pb_decode(&stream, Wrapper_fields, &message); 
+
+      // if (!status)
+      // {
+      //   Serial.printf("Decoding of wrapper failed: %s\n", PB_GET_ERROR(&stream));
+      // }
+
+      // decode the Blade
+      // if (message.type != Wrapper_DataType_BLADE)
+      // {
+      //   Serial.printf("Unexpetect Type: %n\n", message.type);
+      // }
+
+      BladeControl bcMessage = BladeControl_init_zero;
+      pb_istream_t cbStream = pb_istream_from_buffer(buffer, n);
+      bool status = pb_decode(&cbStream, BladeControl_fields, &bcMessage);
+
+      if (!status)
+      {
+        Serial.printf("Decoding failed: %s\n", PB_GET_ERROR(&cbStream));
+      } 
+      else {
+        Serial.printf("Excelent: pitch1: %f, pitch2: %f, pitch3: %f, collective: %f\n", bcMessage.pitch1,  bcMessage.pitch2,  bcMessage.pitch3,  bcMessage.collectivePitch);
+        
+        float servo1Out = (bcMessage.pitch1 + bcMessage.collectivePitch)*500 + 1500;
+        float servo2Out = (bcMessage.pitch2 + bcMessage.collectivePitch)*500 + 1500;
+        float servo3Out = (bcMessage.pitch3 + bcMessage.collectivePitch)*500 + 1500;
+
+        servo1.writeMicroseconds( limit(servo1Out, 900,2100) );
+        servo2.writeMicroseconds( limit(servo2Out, 900,2100) );
+        servo3.writeMicroseconds( limit(servo3Out, 900,2100) );
+
+      }
+
+    } else {
+      Serial.print(".");
+    }
+    delay(200);
+#endif
+
   }
   // Serial.printf("time: %lld\n", newLocalTime());
   // delay(1000);

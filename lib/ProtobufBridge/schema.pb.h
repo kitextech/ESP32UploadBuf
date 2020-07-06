@@ -22,10 +22,24 @@ typedef enum _Wrapper_DataType {
     Wrapper_DataType_TEMPERATURE = 4,
     Wrapper_DataType_WIND = 5,
     Wrapper_DataType_VESC = 6,
-    Wrapper_DataType_SETPOINT = 7
+    Wrapper_DataType_SETPOINT = 7,
+    Wrapper_DataType_BLADE = 8
 } Wrapper_DataType;
 
+typedef enum _Setpoint_Origin {
+    Setpoint_Origin_WEB = 0,
+    Setpoint_Origin_ESP = 1
+} Setpoint_Origin;
+
 /* Struct definitions */
+typedef struct _BladeControl {
+    int64_t time;
+    float pitch1;
+    float pitch2;
+    float pitch3;
+    float collectivePitch;
+} BladeControl;
+
 typedef struct _Force {
     int64_t time;
     float force;
@@ -49,6 +63,7 @@ typedef struct _Setpoint {
     int64_t time;
     float RPM;
     float current;
+    Setpoint_Origin origin;
 } Setpoint;
 
 typedef struct _Speed {
@@ -104,8 +119,12 @@ typedef struct _Imu {
 
 /* Helper constants for enums */
 #define _Wrapper_DataType_MIN Wrapper_DataType_SPEED
-#define _Wrapper_DataType_MAX Wrapper_DataType_SETPOINT
-#define _Wrapper_DataType_ARRAYSIZE ((Wrapper_DataType)(Wrapper_DataType_SETPOINT+1))
+#define _Wrapper_DataType_MAX Wrapper_DataType_BLADE
+#define _Wrapper_DataType_ARRAYSIZE ((Wrapper_DataType)(Wrapper_DataType_BLADE+1))
+
+#define _Setpoint_Origin_MIN Setpoint_Origin_WEB
+#define _Setpoint_Origin_MAX Setpoint_Origin_ESP
+#define _Setpoint_Origin_ARRAYSIZE ((Setpoint_Origin)(Setpoint_Origin_ESP+1))
 
 
 /* Initializer values for message structs */
@@ -119,7 +138,8 @@ typedef struct _Imu {
 #define Vector3_init_default                     {0, 0, 0}
 #define Quaternion_init_default                  {0, 0, 0, 0}
 #define Vesc_init_default                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-#define Setpoint_init_default                    {0, 0, 0}
+#define Setpoint_init_default                    {0, 0, 0, _Setpoint_Origin_MIN}
+#define BladeControl_init_default                {0, 0, 0, 0, 0}
 #define Wrapper_init_zero                        {_Wrapper_DataType_MIN, {{NULL}, NULL}}
 #define Speed_init_zero                          {0, 0}
 #define Force_init_zero                          {0, 0, 0}
@@ -130,9 +150,15 @@ typedef struct _Imu {
 #define Vector3_init_zero                        {0, 0, 0}
 #define Quaternion_init_zero                     {0, 0, 0, 0}
 #define Vesc_init_zero                           {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-#define Setpoint_init_zero                       {0, 0, 0}
+#define Setpoint_init_zero                       {0, 0, 0, _Setpoint_Origin_MIN}
+#define BladeControl_init_zero                   {0, 0, 0, 0, 0}
 
 /* Field tags (for use in manual encoding/decoding) */
+#define BladeControl_time_tag                    1
+#define BladeControl_pitch1_tag                  2
+#define BladeControl_pitch2_tag                  3
+#define BladeControl_pitch3_tag                  4
+#define BladeControl_collectivePitch_tag         5
 #define Force_time_tag                           1
 #define Force_force_tag                          2
 #define Force_id_tag                             3
@@ -146,6 +172,7 @@ typedef struct _Imu {
 #define Setpoint_time_tag                        1
 #define Setpoint_RPM_tag                         2
 #define Setpoint_current_tag                     3
+#define Setpoint_origin_tag                      4
 #define Speed_time_tag                           1
 #define Speed_RPM_tag                            2
 #define Temperature_time_tag                     1
@@ -256,9 +283,19 @@ X(a, STATIC,   SINGULAR, INT32,    tachometerAbs,    10)
 #define Setpoint_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, INT64,    time,              1) \
 X(a, STATIC,   SINGULAR, FLOAT,    RPM,               2) \
-X(a, STATIC,   SINGULAR, FLOAT,    current,           3)
+X(a, STATIC,   SINGULAR, FLOAT,    current,           3) \
+X(a, STATIC,   SINGULAR, UENUM,    origin,            4)
 #define Setpoint_CALLBACK NULL
 #define Setpoint_DEFAULT NULL
+
+#define BladeControl_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, INT64,    time,              1) \
+X(a, STATIC,   SINGULAR, FLOAT,    pitch1,            2) \
+X(a, STATIC,   SINGULAR, FLOAT,    pitch2,            3) \
+X(a, STATIC,   SINGULAR, FLOAT,    pitch3,            4) \
+X(a, STATIC,   SINGULAR, FLOAT,    collectivePitch,   5)
+#define BladeControl_CALLBACK NULL
+#define BladeControl_DEFAULT NULL
 
 extern const pb_msgdesc_t Wrapper_msg;
 extern const pb_msgdesc_t Speed_msg;
@@ -271,6 +308,7 @@ extern const pb_msgdesc_t Vector3_msg;
 extern const pb_msgdesc_t Quaternion_msg;
 extern const pb_msgdesc_t Vesc_msg;
 extern const pb_msgdesc_t Setpoint_msg;
+extern const pb_msgdesc_t BladeControl_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define Wrapper_fields &Wrapper_msg
@@ -284,6 +322,7 @@ extern const pb_msgdesc_t Setpoint_msg;
 #define Quaternion_fields &Quaternion_msg
 #define Vesc_fields &Vesc_msg
 #define Setpoint_fields &Setpoint_msg
+#define BladeControl_fields &BladeControl_msg
 
 /* Maximum encoded size of messages (where known) */
 /* Wrapper_size depends on runtime parameters */
@@ -296,7 +335,8 @@ extern const pb_msgdesc_t Setpoint_msg;
 #define Vector3_size                             15
 #define Quaternion_size                          20
 #define Vesc_size                                74
-#define Setpoint_size                            21
+#define Setpoint_size                            23
+#define BladeControl_size                        31
 
 #ifdef __cplusplus
 } /* extern "C" */
