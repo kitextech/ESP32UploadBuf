@@ -39,9 +39,9 @@ PowerSensor::PowerSensor(uint8_t nSamples, uint8_t vPin, uint8_t cPin,
   uploadFrequency = uploadFrequency_;
   BatMinVolt = minVolt;
   BatMaxVolt = maxVolt;
-  DigitalPin1 = dumpPin1;
-  DigitalPin2 = dumpPin2;
-  DigitalPin3 = dumpPin3;
+  MANUAL_OVERRIDE_SWITCH = dumpPin1;
+  GREEN_LED = dumpPin2;
+  RED_LED = dumpPin3;
   DigitalPin4 = dumpPin4;
 
   t0 = millis();
@@ -98,31 +98,83 @@ Power PowerSensor::prepareData(int64_t time)
 
 void PowerSensor::PowerDumpSetup()
 {
-  pinMode(DigitalPin1, OUTPUT);
-  pinMode(DigitalPin2, OUTPUT);
-  pinMode(DigitalPin3, OUTPUT);
+  pinMode(MANUAL_OVERRIDE_SWITCH, INPUT_PULLDOWN);
+  pinMode(GREEN_LED, OUTPUT);
+  pinMode(RED_LED, OUTPUT);
   pinMode(DigitalPin4, OUTPUT);
   Serial.println("Successfully set up the output pins for Power Dump system");
-  Serial.println(DigitalPin1);
-  Serial.println(DigitalPin2);
-  Serial.println(DigitalPin3);
+  Serial.println(MANUAL_OVERRIDE_SWITCH);
+  Serial.println(GREEN_LED);
+  Serial.println(RED_LED);
   Serial.println(DigitalPin4);
 }
 
 void PowerSensor::PowerControl()
 {
-  if (voltage > BatMaxVolt)
+  if (!digitalRead(MANUAL_OVERRIDE_SWITCH))
   {
-    digitalWrite(DigitalPin1, HIGH);
-    digitalWrite(DigitalPin2, HIGH);
-    digitalWrite(DigitalPin3, HIGH);
-    digitalWrite(DigitalPin4, HIGH);
+    if (voltage > BatMaxVolt)
+    {
+      // opening the gate
+      digitalWrite(DigitalPin4, HIGH);
+      status_indicator = AUTOMATIC_DUMP_ON;
+    }
+    if (voltage < BatMinVolt)
+    {
+      digitalWrite(DigitalPin4, LOW);
+      status_indicator = AUTOMATIC_DUMP_OFF;
+    }
   }
-  if (voltage < BatMinVolt)
+  else
   {
-    digitalWrite(DigitalPin1, LOW);
-    digitalWrite(DigitalPin2, LOW);
-    digitalWrite(DigitalPin3, LOW);
     digitalWrite(DigitalPin4, LOW);
+    status_indicator = MANUAL_DUMP_OFF;
   }
+}
+
+void PowerSensor::Indicator()
+{
+  switch (status_indicator)
+  {
+
+  case (AUTOMATIC_DUMP_ON):
+    digitalWrite(GREEN_LED, HIGH);
+    digitalWrite(RED_LED, LOW);
+    BLINKING_FLAG = true;
+    break;
+
+  case (AUTOMATIC_DUMP_OFF):
+    digitalWrite(GREEN_LED, LOW);
+    digitalWrite(RED_LED, HIGH);
+    BLINKING_FLAG = true;
+    break;
+
+  case (MANUAL_DUMP_OFF):
+    if (BLINKING_FLAG)
+    {
+      initialTime = millis();
+      BLINKING_FLAG = false;
+    }
+    initialTime = Blink(initialTime);
+    break;
+  }
+}
+
+int PowerSensor::Blink(int starttime)
+{
+  if ((millis() - starttime) > 1000 / FreqLED)
+  {
+    digitalWrite(GREEN_LED, HIGH);
+    digitalWrite(RED_LED, HIGH);
+  }
+  else
+  {
+    digitalWrite(GREEN_LED, LOW);
+    digitalWrite(RED_LED, LOW);
+  }
+  if ((millis() - starttime) > 2000 / FreqLED)
+  {
+    starttime = millis();
+  }
+  return (starttime);
 }

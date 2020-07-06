@@ -7,6 +7,13 @@
 class PowerSensor
 {
 public:
+  enum IndicatorS
+  {
+    AUTOMATIC_DUMP_ON,
+    AUTOMATIC_DUMP_OFF,
+    MANUAL_DUMP_OFF
+  } status_indicator;
+
   PowerSensor(uint8_t numSamples_, uint8_t voltagePin_, uint8_t currentPin_,
               float b1_, float m1_, float b2_, float m2_, float bV_, float mV_, float bC_, float mC_,
               uint16_t uploadFrequency_);
@@ -19,6 +26,9 @@ public:
 
   void PowerDumpSetup();
   void PowerControl();
+  void Indicator();
+
+  int Blink(int time);
 
   uint16_t uploadFrequency;
   int t0;
@@ -46,9 +56,13 @@ private:
 
   float BatMinVolt = 0;
   float BatMaxVolt = 0;
-  int DigitalPin1;
-  int DigitalPin2;
-  int DigitalPin3;
+  int MANUAL_OVERRIDE_SWITCH;
+  int GREEN_LED;
+  int RED_LED;
   int DigitalPin4;
+  int FreqLED = 5;
+  int initialTime = 0;
+
+  bool BLINKING_FLAG = true;
 };
 #endif

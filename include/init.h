@@ -74,7 +74,7 @@ WiFiClient client = server.available();
 // WiFi
 const char *ssid = "kitex"; // use kitexField
 const char *password = "morepower";
-const char *addr = "192.168.8.152"; // Andreas' laptop on kitex
+const char *addr = "192.168.8.128"; // Andreas' laptop on kitex
 // const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
 
 // send upd data

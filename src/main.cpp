@@ -19,7 +19,7 @@ enum pleaseDo
   updateOled
 };
 
-void doAtFrequency(pleaseDo whatYouHaveToDo, int &t0, int uploadFrequency, int i=0)
+void doAtFrequency(pleaseDo whatYouHaveToDo, int &t0, int uploadFrequency, int i = 0)
 {
   if (int(millis()) - t0 >= (1000 / uploadFrequency))
   {
@@ -121,16 +121,16 @@ void setup()
     ;
   }
 
-  #if VESC
-    vescControl.setup();
-  #endif
+#if VESC
+  vescControl.setup();
+#endif
 
-  #if POWER_DUMP
-    powerSensor.PowerDumpSetup();
-  #endif
-  #if OLED
-    oled.setup();
-  #endif
+#if POWER_DUMP
+  powerSensor.PowerDumpSetup();
+#endif
+#if OLED
+  oled.setup();
+#endif
 
   pinMode(LED_PIN, OUTPUT);
 
@@ -149,49 +149,50 @@ void setup()
   {
     delay(500);
     Serial.print(".");
-    #if OLED
+#if OLED
     oled.displayWifi(ssid);
-    #endif
+#endif
   }
 
   Serial.printf("\nWiFi connected. IP address: ");
   Serial.println(WiFi.localIP());
 
-  #if VESC
-    server.begin(); // TCP
-  // delay(1000);
-  // client = server.available();
-  #endif
+#if VESC
+  server.begin(); // TCP
+// delay(1000);
+// client = server.available();
+#endif
 
-  #if WIND
-    windSensor.setupWindDirEncoder();
-  #endif
-  #if IMU
-    imuSensor.setup();
-  #endif
-  #if RPM_HALL
-    hallSensor.setup();
-  #endif
-  #if FORCE
-    for (int i=0; i < (sizeof(forceSensors)/sizeof(*forceSensors)); i++)
-    {
-      Serial.println(i);
-      forceSensors[i].setup();
-    }
-  #endif
+#if WIND
+  windSensor.setupWindDirEncoder();
+#endif
+#if IMU
+  imuSensor.setup();
+#endif
+#if RPM_HALL
+  hallSensor.setup();
+#endif
+#if FORCE
+  for (int i = 0; i < (sizeof(forceSensors) / sizeof(*forceSensors)); i++)
+  {
+    Serial.println(i);
+    forceSensors[i].setup();
+  }
+#endif
 
   WiFi.hostByName(addr, insertServerIP); // Define IPAddress object with the ip address string
 
   // Setup time sync with server att address
   configTzTime("0", addr); // https://github.com/espressif/arduino-esp32/issues/1114 & https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/system_time.html
 
-  while (newLocalTime() < 1e6*60*24*365) {
-    Serial.print("Get time from "); 
+  while (newLocalTime() < 1e6 * 60 * 24 * 365)
+  {
+    Serial.print("Get time from ");
     Serial.println(addr);
     delay(1000);
-    #if OLED
+#if OLED
     oled.displayIP(addr);
-    #endif
+#endif
   }
 }
 
@@ -206,44 +207,45 @@ void loop()
   }
   else
   {
-    #if WIND
+#if WIND
     doAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
-    #endif
-    #if IMU
+#endif
+#if IMU
     doAtFrequency(sendImu, imuSensor.t0, imuSensor.uploadFrequency);
-    #endif
-    #if POWER && !POWER_DUMP
+#endif
+#if POWER && !POWER_DUMP
     doAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
-    #endif
-    #if POWER && POWER_DUMP
+#endif
+#if POWER && POWER_DUMP
     doAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
     powerSensor.PowerControl();
-    #endif
-    #if RPM_HALL
-    doAtFrequency(sendRpmHall, hallSensor.t0, hallSensor.uploadFrequency);      
-    #endif
-    #if TEMPERATURE
+    powerSensor.Indicator();
+#endif
+#if RPM_HALL
+    doAtFrequency(sendRpmHall, hallSensor.t0, hallSensor.uploadFrequency);
+#endif
+#if TEMPERATURE
     doAtFrequency(sendTemperature, temperatureSensor.t0, temperatureSensor.uploadFrequency);
-    #endif
-    #if FORCE
-    for (int i=0; i < (sizeof(forceSensors)/sizeof(*forceSensors)); i++)
+#endif
+#if FORCE
+    for (int i = 0; i < (sizeof(forceSensors) / sizeof(*forceSensors)); i++)
     {
       // Serial.println(i);
       doAtFrequency(sendForce, forceSensors[i].t0, forceSensors[i].uploadFrequency, i);
     }
-    #endif
-    #if OLED
-      doAtFrequency(updateOled, oled.t0, oled.updateFrequency);
-    #endif
+#endif
+#if OLED
+    doAtFrequency(updateOled, oled.t0, oled.updateFrequency);
+#endif
 
-    #if VESC
+#if VESC
     if (!client.connected()) // client = the TCP client who's going to send us something
     {
       client = server.available();
     }
     vescControl.updateRpmSetpoint(client);
     doAtFrequency(controlVesc, vescControl.t0, vescControl.uploadFrequency);
-    #endif
+#endif
   }
   // Serial.printf("time: %lld\n", newLocalTime());
   // delay(1000);
