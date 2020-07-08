@@ -11,8 +11,10 @@ public:
   {
     AUTOMATIC_DUMP_ON,
     AUTOMATIC_DUMP_OFF,
-    MANUAL_DUMP_OFF
-  } status_indicator;
+    MANUAL_DUMP_OFF,
+    Default
+  } status_indicator,
+      history_indicator;
 
   PowerSensor(uint8_t numSamples_, uint8_t voltagePin_, uint8_t currentPin_,
               float b1_, float m1_, float b2_, float m2_, float bV_, float mV_, float bC_, float mC_,
@@ -32,6 +34,8 @@ public:
 
   uint16_t uploadFrequency;
   int t0;
+  int BootUpTimeStart;
+  int BootUpTime = 20000;
   float voltage = 0;
 
 private:
