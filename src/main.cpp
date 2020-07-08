@@ -16,8 +16,13 @@ enum pleaseDo
   sendTemperature,
   sendWind,
   controlVesc,
-  updateOled
+  updateOled,
+  sendBlade
 };
+
+//**********************************
+//************ DoAtFrequency ****************
+//**********************************
 
 void doAtFrequency(pleaseDo whatYouHaveToDo, int &t0, int uploadFrequency, int i = 0)
 {
@@ -99,6 +104,17 @@ void doAtFrequency(pleaseDo whatYouHaveToDo, int &t0, int uploadFrequency, int i
       break;
     }
 #endif
+#if BLADE
+    case sendBlade:
+    {
+      BladeControl bladeControl = bladePitchControl.prepareData(newLocalTime());
+      protobufBridge.sendBladeControl(bladeControl);
+      break;
+    }
+
+
+#endif
+
     default:
       break;
     }
@@ -112,11 +128,15 @@ void doAtFrequency(pleaseDo whatYouHaveToDo, int &t0, int uploadFrequency, int i
   }
 }
 
+//**********************************
+//************ SETUP ****************
+//**********************************
+
 void setup()
 {
   Serial.begin(115200); // USB to computer
   Serial.setDebugOutput(true);
-  while (!Serial)
+  while (!Serial) // wait for serial to be active
   {
     ;
   }
@@ -157,6 +177,11 @@ void setup()
   Serial.printf("\nWiFi connected. IP address: ");
   Serial.println(WiFi.localIP());
 
+  // Listen for UDP packages
+  Serial.print("Listen for UDP packages on port: ");
+  Serial.println(udpPortLocalRecieve);
+  udp.begin(udpPortLocalRecieve);
+
 #if VESC
   server.begin(); // TCP
 // delay(1000);
@@ -180,6 +205,14 @@ void setup()
   }
 #endif
 
+#if BLADE
+  bladePitchControl.setup();
+  
+#endif
+  
+
+  // configure time 
+
   WiFi.hostByName(addr, insertServerIP); // Define IPAddress object with the ip address string
 
   // Setup time sync with server att address
@@ -194,8 +227,13 @@ void setup()
     oled.displayIP(addr);
 #endif
   }
+
+
 }
 
+//**********************************
+//************ LOOP ****************
+//**********************************
 void loop()
 {
   digitalWrite(LED_PIN, LOW);
@@ -210,23 +248,29 @@ void loop()
 #if WIND
     doAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
 #endif
+
 #if IMU
     doAtFrequency(sendImu, imuSensor.t0, imuSensor.uploadFrequency);
 #endif
+
 #if POWER && !POWER_DUMP
     doAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
 #endif
+
 #if POWER && POWER_DUMP
     doAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
     powerSensor.PowerControl();
     powerSensor.Indicator();
 #endif
+
 #if RPM_HALL
     doAtFrequency(sendRpmHall, hallSensor.t0, hallSensor.uploadFrequency);
 #endif
+
 #if TEMPERATURE
     doAtFrequency(sendTemperature, temperatureSensor.t0, temperatureSensor.uploadFrequency);
 #endif
+
 #if FORCE
     for (int i = 0; i < (sizeof(forceSensors) / sizeof(*forceSensors)); i++)
     {
@@ -234,6 +278,7 @@ void loop()
       doAtFrequency(sendForce, forceSensors[i].t0, forceSensors[i].uploadFrequency, i);
     }
 #endif
+
 #if OLED
     doAtFrequency(updateOled, oled.t0, oled.updateFrequency);
 #endif
@@ -246,7 +291,23 @@ void loop()
     vescControl.updateRpmSetpoint(client);
     doAtFrequency(controlVesc, vescControl.t0, vescControl.uploadFrequency);
 #endif
+
+#if BLADE
+    //bladePitchControl.loop(udp, UDPInBuffer);
+  udp.parsePacket();
+  int n = udp.read(UDPInBuffer, 128);
+
+  if (n > 0) {
+    bladePitchControl.loop(UDPInBuffer, n);
+  } 
+
+  doAtFrequency(sendBlade, bladePitchControl.t0 , bladePitchControl.uploadFrequency);
+  // else {
+  //   Serial.print(".");
+  //   delay(100);
+  // }
+
+#endif
+
   }
-  // Serial.printf("time: %lld\n", newLocalTime());
-  // delay(1000);
 }

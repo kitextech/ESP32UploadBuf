@@ -79,9 +79,9 @@ void VescControl::updateRpmSetpoint(WiFiClient client)
         int msg_length = bufferTCP[0];
 
         client.read(bufferTCP, bufferTCP[0]);
-        Speed message = Speed_init_zero;
+        Setpoint message = Speed_init_zero;
         pb_istream_t stream = pb_istream_from_buffer(bufferTCP, msg_length);
-        bool status = pb_decode(&stream, Speed_fields, &message);
+        bool status = pb_decode(&stream, Setpoint_fields, &message);
 
         if (!status)
         {

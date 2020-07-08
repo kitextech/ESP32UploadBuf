@@ -16,13 +16,14 @@ using namespace std;
 // Sensor and vesc include statements
 #define IMU 0
 #define WIND 0
-#define POWER 1
-#define POWER_DUMP 1
+#define POWER 0
+#define POWER_DUMP 0
 #define RPM_HALL 0
 #define TEMPERATURE 0
 #define FORCE 0
 #define OLED 0
 #define VESC 0
+#define BLADE 1
 
 #if IMU
 #include <ImuSensor.h>
@@ -71,14 +72,29 @@ WiFiClient client = server.available();
 // uint8_t bufferTCP[128] = {0};
 #endif
 
+#if BLADE
+
+#include <BladePitchControl.h>
+// These are all GPIO pins on the ESP32
+// Recommended pins include 2,4,12-19,21-23,25-27,32-33
+int servo1Pin = 33;
+int servo2Pin = 15;
+int servo3Pin = 32;
+BladePitchControl bladePitchControl(servo1Pin, servo2Pin, servo3Pin, 1);
+#endif
+
 // WiFi
 const char *ssid = "kitex"; // use kitexField
 const char *password = "morepower";
 const char *addr = "192.168.8.152"; // Andreas' laptop on kitex
-// const char *addr = "192.168.8.100"; // Hossein's laptop on kitexField
+// const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
 
 // send upd data
 IPAddress insertServerIP;
 unsigned int udpPortRemoteInsert = 10102;
 WiFiUDP udp;
 ProtobufBridge protobufBridge;
+
+// recieve upd data
+unsigned int udpPortLocalRecieve = 10102;
+uint8_t UDPInBuffer[128];

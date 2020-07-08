@@ -289,6 +289,44 @@ void ProtobufBridge::sendVesc(Vesc vesc)
   // Serial.println(stream.bytes_written);
 }
 
+void ProtobufBridge::sendBladeControl(BladeControl bladeControl)
+{
+  // create stream from the buffer
+  pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
+
+  // write setpoint data
+  bool status = pb_encode(&stream, BladeControl_fields, &bladeControl);
+  // check the status
+  if (!status)
+  {
+    Serial.println("Failed to encode bladeControl");
+    return;
+  }
+  // Serial.print("Message Length setpoint: ");
+  // Serial.println(stream.bytes_written);
+  messageLength = stream.bytes_written;
+
+  stream = pb_ostream_from_buffer(bufferWrapper, sizeof(bufferWrapper));
+
+  // wrapper
+  Wrapper wrap = Wrapper_init_zero;
+  wrap.type = Wrapper_DataType_BLADE;
+  wrap.data.funcs.encode = &ProtobufBridge::writeBuffer;
+
+  status = pb_encode(&stream, Wrapper_fields, &wrap);
+
+  if (!status)
+  {
+    Serial.println("Failed to encode wrapper");
+    return;
+  }
+
+  wrapMessageLength = stream.bytes_written;
+
+  // Serial.print("Message Length wrapper: ");
+  // Serial.println(stream.bytes_written);
+}
+
 
 void ProtobufBridge::sendSetpoint(Setpoint setpoint)
 {
