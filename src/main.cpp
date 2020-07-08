@@ -182,12 +182,6 @@ void setup()
   Serial.println(udpPortLocalRecieve);
   udp.begin(udpPortLocalRecieve);
 
-#if VESC
-  server.begin(); // TCP
-// delay(1000);
-// client = server.available();
-#endif
-
 #if WIND
   windSensor.setupWindDirEncoder();
 #endif
@@ -284,23 +278,29 @@ void loop()
 #endif
 
 #if VESC
-    if (!client.connected()) // client = the TCP client who's going to send us something
-    {
-      client = server.available();
-    }
-    vescControl.updateRpmSetpoint(client);
-    doAtFrequency(controlVesc, vescControl.t0, vescControl.uploadFrequency);
+
+  udp.parsePacket();
+  int n = udp.read(UDPInBuffer, 128);
+
+  if (n > 0) {
+    vescControl.updateRpmSetpoint(UDPInBuffer, n);
+  } else {
+    // Serial.println(".");
+    // delay(100);
+  }
+  doAtFrequency(controlVesc, vescControl.t0, vescControl.uploadFrequency);
+    
 #endif
 
 #if BLADE
     //bladePitchControl.loop(udp, UDPInBuffer);
+
   udp.parsePacket();
   int n = udp.read(UDPInBuffer, 128);
 
   if (n > 0) {
     bladePitchControl.loop(UDPInBuffer, n);
   } 
-
   doAtFrequency(sendBlade, bladePitchControl.t0 , bladePitchControl.uploadFrequency);
   // else {
   //   Serial.print(".");

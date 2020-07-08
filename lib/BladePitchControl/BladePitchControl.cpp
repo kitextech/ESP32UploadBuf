@@ -97,8 +97,6 @@ void BladePitchControl::loop(uint8_t UDPInBuffer[], int n)
     float servo2Out = (bcMessage.pitch2 + bcMessage.collectivePitch)*500 + 1500;
     float servo3Out = (bcMessage.pitch3 + bcMessage.collectivePitch)*500 + 1500;
 
-    
-
     servo1.writeMicroseconds( limit(servo1Out, 900,2100) );
     servo2.writeMicroseconds( limit(servo2Out, 900,2100) );
     servo3.writeMicroseconds( limit(servo3Out, 900,2100) );

@@ -22,7 +22,7 @@ public:
   Setpoint prepareSetpointData(int64_t time);
   int mode(int a[], int n);
   void updateArray(int newElement, int n);
-  void updateRpmSetpoint(WiFiClient client);
+  void updateRpmSetpoint(uint8_t UDPInBuffer[], int n);
   void setRpm();
 
   int t0;
@@ -34,6 +34,7 @@ public:
   float maxCurrent = 5;
   float minCurrent = -45;
   float rpmSetpoint = 0.0;
+  float rpmRampStart = 0;
   float rampAcc = .7; // RPM/ms^2
   int rpmSetpointArray[MODE_ARRAY_LENGTH] = {0};
   float pidSUM = 0;
@@ -42,6 +43,5 @@ private:
   uint8_t modeArrayLength;
   HardwareSerial SerialVesc{2};
   VescUart vesc;
-  uint8_t bufferTCP[128] = {0};
 };
 #endif

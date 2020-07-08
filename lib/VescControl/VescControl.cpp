@@ -11,8 +11,6 @@ void VescControl::setup()
 {
   SerialVesc.begin(115200, SERIAL_8N1, 16, 17);
   vesc.setSerialPort(&SerialVesc);
-  // Serial1.begin(115200);  // rx/tx pins of ESP32 (for the vesc)
-  // vesc.setSerialPort(&Serial1);
 }
 
 Vesc VescControl::prepareVescData(int64_t time)
@@ -56,51 +54,27 @@ int VescControl::mode(int a[], int n) {
    return maxValue;
 }
 
-void VescControl::updateArray(int newElement, int n)
+void VescControl::updateRpmSetpoint(uint8_t UDPInBuffer[], int n)
 {
-  for (int i = n-1; i > 0; --i) {
-    rpmSetpointArray[i] = rpmSetpointArray[i-1] ;
-  } 
-  rpmSetpointArray[0] = newElement;
-}
 
-void VescControl::updateRpmSetpoint(WiFiClient client)
-{
-  if (client)
+  Setpoint message = Setpoint_init_zero;
+  pb_istream_t stream = pb_istream_from_buffer(UDPInBuffer, n);
+  bool status = pb_decode(&stream, Setpoint_fields, &message);
+
+  if (!status)
   {
-    while (client.connected())
+    Serial.printf("Decoding failed: %s\n", PB_GET_ERROR(&stream));
+  }
+  else
+  {
+    if (message.RPM != rpmSetpoint)
     {
-      if (client.available() > 0)
-      {
-        client.read(bufferTCP, 1);
-        // String str = String("Message length (bytes): ") + (bufferTCP[0]);
-        // Serial.println(str);
-
-        int msg_length = bufferTCP[0];
-
-        client.read(bufferTCP, bufferTCP[0]);
-        Setpoint message = Speed_init_zero;
-        pb_istream_t stream = pb_istream_from_buffer(bufferTCP, msg_length);
-        bool status = pb_decode(&stream, Setpoint_fields, &message);
-
-        if (!status)
-        {
-          Serial.printf("Decoding failed: %s\n", PB_GET_ERROR(&stream));
-        }
-        else
-        {
-          updateArray((int)(message.RPM), MODE_ARRAY_LENGTH);
-          if (message.RPM == mode(rpmSetpointArray, MODE_ARRAY_LENGTH) && message.RPM != rpmSetpoint)
-          {
-            Serial.printf("RPM is set to %d\n", (int)message.RPM);  
-            rpmDiff = message.RPM - (float)rpmSetpoint;
-            t0_ramp = millis();
-            rampingTime = abs((int)(rpmDiff * 1.0/rampAcc));
-            rpmSetpoint = (float)mode(rpmSetpointArray, MODE_ARRAY_LENGTH);
-          }
-        }
-      }
-      return;
+      Serial.printf("RPM is set to %d\n", (int)message.RPM);  
+      rpmRampStart = vesc.data.rpm;
+      rpmDiff = message.RPM - rpmRampStart;
+      t0_ramp = millis();
+      rampingTime = abs((int)(rpmDiff * 1.0/rampAcc));
+      rpmSetpoint = message.RPM;
     }
   }
 }
@@ -112,6 +86,6 @@ void VescControl::setRpm()
       rpm_sp = (float(millis()) - float(t0_ramp)) / rampingTime * rpmDiff + ((float)rpmSetpoint - rpmDiff);
     else
       rpm_sp = rpmSetpoint;
-    Serial.printf("RPM: %f\n", rpm_sp);  
+
     vesc.setRPM(rpm_sp);
 }

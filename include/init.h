@@ -14,7 +14,7 @@ using namespace std;
 #define LED_PIN 0
 
 // Sensor and vesc include statements
-#define IMU 0
+#define IMU 1
 #define WIND 0
 #define POWER 0
 #define POWER_DUMP 0
@@ -23,7 +23,7 @@ using namespace std;
 #define FORCE 0
 #define OLED 0
 #define VESC 0
-#define BLADE 1
+#define BLADE 0
 
 #if IMU
 #include <ImuSensor.h>
@@ -65,11 +65,6 @@ Oled oled(5);
 #if VESC
 #include <VescControl.h>
 VescControl vescControl(30);
-
-int tcpPort = 10101;
-WiFiServer server(tcpPort);
-WiFiClient client = server.available();
-// uint8_t bufferTCP[128] = {0};
 #endif
 
 #if BLADE
@@ -80,11 +75,11 @@ WiFiClient client = server.available();
 int servo1Pin = 33;
 int servo2Pin = 15;
 int servo3Pin = 32;
-BladePitchControl bladePitchControl(servo1Pin, servo2Pin, servo3Pin, 1);
+BladePitchControl bladePitchControl(servo1Pin, servo2Pin, servo3Pin, 5);
 #endif
 
 // WiFi
-const char *ssid = "kitex"; // use kitexField
+const char *ssid = "kitex"; // "kitex"; // use kitexField
 const char *password = "morepower";
 const char *addr = "192.168.8.152"; // Andreas' laptop on kitex
 // const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
