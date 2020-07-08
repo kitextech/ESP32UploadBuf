@@ -73,29 +73,14 @@ WiFiClient client = server.available();
 #endif
 
 #if BLADE
-// #include <Oled.h>
-// Oled oled(5);
-const char *world = "world";
 
-#include <ESP32Servo.h>
-
-// create four servo objects 
-Servo servo1;
-Servo servo2;
-Servo servo3;
-
-// Published values for SG90 servos; adjust if needed
-int minUs = 1000;
-int maxUs = 2000;
-
+#include <BladePitchControl.h>
 // These are all GPIO pins on the ESP32
 // Recommended pins include 2,4,12-19,21-23,25-27,32-33 
 int servo1Pin = 33;
 int servo2Pin = 15;
 int servo3Pin = 32;
-
-ESP32PWM pwm;
-
+BladePitchControl bladePitchControl(servo1Pin, servo2Pin, servo3Pin, 1);
 #endif
 
 // WiFi
@@ -112,3 +97,4 @@ ProtobufBridge protobufBridge;
 
 // recieve upd data
 unsigned int udpPortLocalRecieve = 10102;
+uint8_t UDPInBuffer[128]; 

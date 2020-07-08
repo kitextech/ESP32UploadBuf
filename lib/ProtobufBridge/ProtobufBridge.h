@@ -24,6 +24,7 @@ public:
   void sendTemperature(Temperature temperature);
   void sendPower(Power power);
   void sendForce(Force force);
+  void sendBladeControl(BladeControl bladeControl);
 
   void sendVesc(Vesc vesc);
   void sendSetpoint(Setpoint setpoint);
