@@ -37,7 +37,7 @@ WindSensor windSensor(A2, 2, 0.4, 2, 0.2, 32.4, true, 3);
 #include <PowerSensor.h>
 //PowerSensor powerSensor(50, A2, A3, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1, 28.8, 36.0, A9, A10, A7, A12);
 // we need to remove three of the gates
-PowerSensor powerSensor(50, A3, A2, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1, 12.0, 14.0, A9, A10, A7, A12);
+PowerSensor powerSensor(50, A3, A2, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1, 43.9, 45.1, A9, A10, A7, A12);
 #endif
 #if (POWER && !POWER_DUMP)
 #include <PowerSensor.h>
@@ -71,7 +71,7 @@ VescControl vescControl(30);
 
 #include <BladePitchControl.h>
 // These are all GPIO pins on the ESP32
-// Recommended pins include 2,4,12-19,21-23,25-27,32-33 
+// Recommended pins include 2,4,12-19,21-23,25-27,32-33
 int servo1Pin = 33;
 int servo2Pin = 15;
 int servo3Pin = 32;
@@ -94,4 +94,4 @@ ProtobufBridge protobufBridge;
 
 // recieve upd data
 unsigned int udpPortLocalRecieve = 10102;
-uint8_t UDPInBuffer[128]; 
+uint8_t UDPInBuffer[128];

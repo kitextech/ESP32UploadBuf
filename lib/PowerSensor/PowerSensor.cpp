@@ -80,12 +80,27 @@ Power PowerSensor::prepareData(int64_t time)
   voltage = adcVoltage * mV + bV;
   current = adcCurrent > 0 ? adcCurrent * mC + bC : 0;
 
-  Serial.print(voltage);
-  Serial.println(" V");
-  Serial.print(current);
-  Serial.println(" A");
-  Serial.print(voltage * current);
-  Serial.println(" W");
+  // Serial.print(voltage);
+  // Serial.println(" V");
+  // Serial.print(current);
+  // Serial.println(" A");
+  // Serial.print(voltage * current);
+  // Serial.println(" W");
+  switch (status_indicator)
+  {
+  case (AUTOMATIC_DUMP_OFF):
+    Serial.println("AUTOMATIC POWER DUMPING IS OFF!");
+    break;
+  case (AUTOMATIC_DUMP_ON):
+    Serial.println("AUTOMATIC POWER DUMPING IS ON!");
+    break;
+  case (MANUAL_DUMP_OFF):
+    Serial.println("MANUAL KEY IS ENGAGED!");
+    break;
+  case (Default):
+    Serial.println("BOOTING UP!");
+    break;
+  };
 
   sumV = 0;
   sumC = 0;
@@ -102,33 +117,59 @@ void PowerSensor::PowerDumpSetup()
   pinMode(GREEN_LED, OUTPUT);
   pinMode(RED_LED, OUTPUT);
   pinMode(DigitalPin4, OUTPUT);
+  status_indicator = Default;
+  BootUpTimeStart = millis();
   Serial.println("Successfully set up the output pins for Power Dump system");
   Serial.println(MANUAL_OVERRIDE_SWITCH);
   Serial.println(GREEN_LED);
   Serial.println(RED_LED);
   Serial.println(DigitalPin4);
+  Serial.println("Power system set in bootup Mode!");
 }
 
 void PowerSensor::PowerControl()
 {
-  if (!digitalRead(MANUAL_OVERRIDE_SWITCH))
+  if (millis() - BootUpTimeStart > BootUpTime)
   {
-    if (voltage > BatMaxVolt)
-    {
-      // opening the gate
-      digitalWrite(DigitalPin4, HIGH);
-      status_indicator = AUTOMATIC_DUMP_ON;
-    }
-    if (voltage < BatMinVolt)
+    if (digitalRead(MANUAL_OVERRIDE_SWITCH))
     {
       digitalWrite(DigitalPin4, LOW);
-      status_indicator = AUTOMATIC_DUMP_OFF;
+      status_indicator = MANUAL_DUMP_OFF;
+    }
+    else
+    {
+      if (voltage > BatMaxVolt)
+      {
+        // opening the gate
+        digitalWrite(DigitalPin4, HIGH);
+        status_indicator = AUTOMATIC_DUMP_ON;
+        history_indicator = AUTOMATIC_DUMP_ON;
+      }
+      else if (voltage < BatMinVolt)
+      {
+        digitalWrite(DigitalPin4, LOW);
+        status_indicator = AUTOMATIC_DUMP_OFF;
+        history_indicator = AUTOMATIC_DUMP_OFF;
+      }
+      else
+      {
+        if (history_indicator == AUTOMATIC_DUMP_ON)
+        {
+          digitalWrite(DigitalPin4, HIGH);
+          status_indicator = AUTOMATIC_DUMP_ON;
+        }
+        if (history_indicator == AUTOMATIC_DUMP_OFF)
+        {
+          digitalWrite(DigitalPin4, LOW);
+          status_indicator = AUTOMATIC_DUMP_OFF;
+        }
+      }
     }
   }
   else
   {
     digitalWrite(DigitalPin4, LOW);
-    status_indicator = MANUAL_DUMP_OFF;
+    status_indicator = Default;
   }
 }
 
@@ -145,6 +186,12 @@ void PowerSensor::Indicator()
 
   case (AUTOMATIC_DUMP_OFF):
     digitalWrite(GREEN_LED, LOW);
+    digitalWrite(RED_LED, HIGH);
+    BLINKING_FLAG = true;
+    break;
+
+  case (Default):
+    digitalWrite(GREEN_LED, HIGH);
     digitalWrite(RED_LED, HIGH);
     BLINKING_FLAG = true;
     break;
