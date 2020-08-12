@@ -23,7 +23,7 @@ using namespace std;
 #define FORCE 0
 #define OLED 0
 #define VESC 0
-#define BLADE 0
+#define BLADE 1
 
 #if IMU
 #include <ImuSensor.h>
@@ -79,10 +79,12 @@ BladePitchControl bladePitchControl(servo1Pin, servo2Pin, servo3Pin, 5);
 #endif
 
 // WiFi
-const char *ssid = "kitex"; // "kitex"; // use kitexField
 const char *password = "morepower";
-const char *addr = "192.168.8.152"; // Andreas' laptop on kitex
-// const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
+
+// const char *ssid = "kitex"; // "kitex"; // use kitexField
+// const char *addr = "192.168.8.152"; // Andreas' laptop on kitex
+const char *ssid = "kitexField"; // "kitex"; // use kitexField
+const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
 
 // send upd data
 IPAddress insertServerIP;
