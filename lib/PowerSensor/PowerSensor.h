@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <schema.pb.h>
+#include <Timer.h>
 
 class PowerSensor
 {
@@ -23,9 +24,9 @@ public:
   PowerSensor(uint8_t nSamples, uint8_t vPin, uint8_t cPin,
               float b1_, float m1_, float b2_, float m2_, float bV_, float mV_, float bC_, float mC_,
               uint16_t uploadFrequency_, float minVolt, float maxVolt, uint8_t dumpPin1, uint8_t dumpPin2, uint8_t dumpPin3, uint8_t dumpPin4);
-
+  
   Power prepareData(int64_t time);
-
+  void readVoltageCurrent();
   void PowerDumpSetup();
   void PowerControl();
   void Indicator();
@@ -37,6 +38,8 @@ public:
   int BootUpTimeStart;
   int BootUpTime = 20000;
   float voltage = 0;
+
+  Timer noWifiLoopTimer;
 
 private:
   uint8_t numSamples;

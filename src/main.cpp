@@ -51,10 +51,10 @@ void doAtFrequency(pleaseDo whatYouHaveToDo, int &t0, int uploadFrequency, int i
     {
       Temperature temperatureData = temperatureSensor.prepareData(newLocalTime());
       protobufBridge.sendTemperature(temperatureData);
-#endif
-#if WIND
       break;
     }
+#endif
+#if WIND
     case sendWind:
     {
       Wind windData = windSensor.prepareData(newLocalTime());
@@ -165,20 +165,20 @@ void setup()
   WiFi.mode(WIFI_STA); // Necessary?
   WiFi.begin(ssid, password);
 
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.print(".");
-#if OLED
-    oled.displayWifi(ssid);
-#endif
-  }
+//   while (WiFi.status() != WL_CONNECTED)
+//   {
+//     delay(500);
+//     Serial.print(".");
+// #if OLED
+//     oled.displayWifi(ssid);
+// #endif
+//   }
 
-  Serial.printf("\nWiFi connected. IP address: ");
-  Serial.println(WiFi.localIP());
+  // Serial.printf("\nWiFi connected. IP address: ");
+  // Serial.println(WiFi.localIP());
 
   // Listen for UDP packages
-  Serial.print("Listen for UDP packages on port: ");
+  Serial.print("Listen for UDP packages on port: "); // can be done even without wifi connection
   Serial.println(udpPortLocalRecieve);
   udp.begin(udpPortLocalRecieve);
 
@@ -212,33 +212,39 @@ void setup()
   // Setup time sync with server att address
   configTzTime("0", addr); // https://github.com/espressif/arduino-esp32/issues/1114 & https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/system_time.html
 
-  while (newLocalTime() < 1e6 * 60 * 24 * 365)
-  {
-    Serial.print("Get time from ");
-    Serial.println(addr);
-    delay(1000);
-#if OLED
-    oled.displayIP(addr);
-#endif
-  }
-
-
 }
 
-//**********************************
-//************ LOOP ****************
-//**********************************
-void loop()
-{
-  digitalWrite(LED_PIN, LOW);
 
-  if (WiFi.status() != WL_CONNECTED)
-  {
-    Serial.println("Connection failed, wait 5 sec...");
-    delay(5000);
+
+boolean checkWifiAndTime() {
+  
+  if (WiFi.status() != WL_CONNECTED) {
+    // #if OLED
+    // oled.displayWifi(ssid);
+    // #endif  
+    return false;
   }
-  else
+
+  if (newLocalTime() < 1e6 * 60 * 24 * 365)
   {
+    return false;
+    // no time;
+    // Serial.print("Get time from ");
+    // Serial.println(addr);
+    // delay(1000);
+// #if OLED
+//     oled.displayIP(addr);
+// #endif
+  }
+  return true;
+}
+
+
+
+
+void wifiAndTimeLoop() {
+
+  
 #if WIND
     doAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
 #endif
@@ -253,8 +259,6 @@ void loop()
 
 #if POWER && POWER_DUMP
     doAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
-    powerSensor.PowerControl();
-    powerSensor.Indicator();
 #endif
 
 #if RPM_HALL
@@ -309,5 +313,33 @@ void loop()
 
 #endif
 
-  }
 }
+
+void noWifiAndTimeLoop() {
+
+#if POWER && POWER_DUMP
+  if (powerSensor.noWifiLoopTimer.doRun()) {
+    powerSensor.readVoltageCurrent();
+    powerSensor.PowerControl();
+    powerSensor.Indicator();
+    Serial.println("PowerSensor NoFi");
+  }
+#endif
+
+}
+
+
+//**********************************
+//************ LOOP ****************
+//**********************************
+void loop()
+{
+  //digitalWrite(LED_PIN, LOW);
+
+  if (checkWifiAndTime()) {
+    wifiAndTimeLoop();
+  }
+
+  noWifiAndTimeLoop();
+}
+

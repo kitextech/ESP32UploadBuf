@@ -3,7 +3,8 @@
 // multi-inputs constructor
 PowerSensor::PowerSensor(uint8_t numSamples_, uint8_t voltagePin_, uint8_t currentPin_,
                          float b1_, float m1_, float b2_, float m2_, float bV_, float mV_, float bC_, float mC_,
-                         uint16_t uploadFrequency_)
+                         uint16_t uploadFrequency_) :
+  noWifiLoopTimer(uploadFrequency_) // member initializer list. 
 {
   Serial.println("Created a power sensor");
   numSamples = numSamples_;
@@ -22,7 +23,8 @@ PowerSensor::PowerSensor(uint8_t numSamples_, uint8_t voltagePin_, uint8_t curre
 }
 PowerSensor::PowerSensor(uint8_t nSamples, uint8_t vPin, uint8_t cPin,
                          float b1_, float m1_, float b2_, float m2_, float bV_, float mV_, float bC_, float mC_,
-                         uint16_t uploadFrequency_, float minVolt, float maxVolt, uint8_t dumpPin1, uint8_t dumpPin2, uint8_t dumpPin3, uint8_t dumpPin4)
+                         uint16_t uploadFrequency_, float minVolt, float maxVolt, uint8_t dumpPin1, uint8_t dumpPin2, uint8_t dumpPin3, uint8_t dumpPin4):
+                         noWifiLoopTimer(uploadFrequency_)
 {
   Serial.println("Created a power sensor");
   numSamples = nSamples;
@@ -45,15 +47,15 @@ PowerSensor::PowerSensor(uint8_t nSamples, uint8_t vPin, uint8_t cPin,
   DigitalPin4 = dumpPin4;
 
   t0 = millis();
+  // readAndControlTimer = Timer(1); // 1 hz;
 }; // What's this semicolon doing here?
 
-Power PowerSensor::prepareData(int64_t time)
+void PowerSensor::readVoltageCurrent()
 {
-
-  Power data = Power_init_zero;
-  data.time = time;
-
   // take a number of analog samples and add them up
+  sumV = 0;
+  sumC = 0;
+  
   for (uint8_t i = 0; i < numSamples; i++)
   {
     sumV += analogRead(voltagePin);
@@ -79,31 +81,36 @@ Power PowerSensor::prepareData(int64_t time)
   // multiplyer factors based on further measurements (datasheet was only correct for the voltage)
   voltage = adcVoltage * mV + bV;
   current = adcCurrent > 0 ? adcCurrent * mC + bC : 0;
+}
 
+Power PowerSensor::prepareData(int64_t time)
+{
+  Power data = Power_init_zero;
+  data.time = time;
+
+  readVoltageCurrent();
   // Serial.print(voltage);
   // Serial.println(" V");
   // Serial.print(current);
   // Serial.println(" A");
   // Serial.print(voltage * current);
   // Serial.println(" W");
-  switch (status_indicator)
-  {
-  case (AUTOMATIC_DUMP_OFF):
-    Serial.println("AUTOMATIC POWER DUMPING IS OFF!");
-    break;
-  case (AUTOMATIC_DUMP_ON):
-    Serial.println("AUTOMATIC POWER DUMPING IS ON!");
-    break;
-  case (MANUAL_DUMP_OFF):
-    Serial.println("MANUAL KEY IS ENGAGED!");
-    break;
-  case (Default):
-    Serial.println("BOOTING UP!");
-    break;
-  };
 
-  sumV = 0;
-  sumC = 0;
+  // switch (status_indicator)
+  // {
+  // case (AUTOMATIC_DUMP_OFF):
+  //   Serial.println("AUTOMATIC POWER DUMPING IS OFF!");
+  //   break;
+  // case (AUTOMATIC_DUMP_ON):
+  //   Serial.println("AUTOMATIC POWER DUMPING IS ON!");
+  //   break;
+  // case (MANUAL_DUMP_OFF):
+  //   Serial.println("MANUAL KEY IS ENGAGED!");
+  //   break;
+  // case (Default):
+  //   Serial.println("BOOTING UP!");
+  //   break;
+  // };
 
   data.voltage = voltage;
   data.current = current;
@@ -178,25 +185,25 @@ void PowerSensor::Indicator()
   switch (status_indicator)
   {
 
-  case (AUTOMATIC_DUMP_ON):
+  case AUTOMATIC_DUMP_ON:
     digitalWrite(GREEN_LED, HIGH);
     digitalWrite(RED_LED, LOW);
     BLINKING_FLAG = true;
     break;
 
-  case (AUTOMATIC_DUMP_OFF):
+  case AUTOMATIC_DUMP_OFF:
     digitalWrite(GREEN_LED, LOW);
     digitalWrite(RED_LED, HIGH);
     BLINKING_FLAG = true;
     break;
 
-  case (Default):
+  case Default:
     digitalWrite(GREEN_LED, HIGH);
     digitalWrite(RED_LED, HIGH);
     BLINKING_FLAG = true;
     break;
 
-  case (MANUAL_DUMP_OFF):
+  case MANUAL_DUMP_OFF:
     if (BLINKING_FLAG)
     {
       initialTime = millis();

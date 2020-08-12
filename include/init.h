@@ -14,16 +14,16 @@ using namespace std;
 #define LED_PIN 0
 
 // Sensor and vesc include statements
-#define IMU 1
+#define IMU 0
 #define WIND 0
-#define POWER 0
-#define POWER_DUMP 0
+#define POWER 1
+#define POWER_DUMP 1
 #define RPM_HALL 0
 #define TEMPERATURE 0
 #define FORCE 0
 #define OLED 0
 #define VESC 0
-#define BLADE 1
+#define BLADE 0
 
 #if IMU
 #include <ImuSensor.h>
