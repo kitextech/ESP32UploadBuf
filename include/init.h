@@ -37,7 +37,7 @@ WindSensor windSensor(A2, 2, 0.4, 2, 0.2, 32.4, true, 3);
 #include <PowerSensor.h>
 //PowerSensor powerSensor(50, A2, A3, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1, 28.8, 36.0, A9, A10, A7, A12);
 // we need to remove three of the gates
-PowerSensor powerSensor(50, A3, A2, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1, 43.9, 45.1, A9, A10, A7, A12);
+PowerSensor powerSensor(50, A3, A2, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1, 43.0, 46.8, A9, A10, A7, A12, 10);
 #endif
 #if (POWER && !POWER_DUMP)
 #include <PowerSensor.h>
@@ -81,10 +81,10 @@ BladePitchControl bladePitchControl(servo1Pin, servo2Pin, servo3Pin, 5);
 // WiFi
 const char *password = "morepower";
 
-// const char *ssid = "kitex"; // "kitex"; // use kitexField
-// const char *addr = "192.168.8.152"; // Andreas' laptop on kitex
-const char *ssid = "kitexField"; // "kitex"; // use kitexField
-const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
+const char *ssid = "kitex"; // "kitex"; // use kitexField
+const char *addr = "192.168.8.152"; // Andreas' laptop on kitex
+// const char *ssid = "kitexField"; // "kitex"; // use kitexField
+// const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
 
 // send upd data
 IPAddress insertServerIP;
