@@ -51,10 +51,10 @@ void doAtFrequency(pleaseDo whatYouHaveToDo, int &t0, int uploadFrequency, int i
     {
       Temperature temperatureData = temperatureSensor.prepareData(newLocalTime());
       protobufBridge.sendTemperature(temperatureData);
-      break;
-    }
 #endif
 #if WIND
+      break;
+    }
     case sendWind:
     {
       Wind windData = windSensor.prepareData(newLocalTime());
@@ -148,6 +148,7 @@ void setup()
 #if POWER_DUMP
   powerSensor.PowerDumpSetup();
 #endif
+
 #if OLED
   oled.setup();
 #endif
@@ -165,22 +166,28 @@ void setup()
   WiFi.mode(WIFI_STA); // Necessary?
   WiFi.begin(ssid, password);
 
-//   while (WiFi.status() != WL_CONNECTED)
-//   {
-//     delay(500);
-//     Serial.print(".");
-// #if OLED
-//     oled.displayWifi(ssid);
-// #endif
-//   }
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    Serial.print(".");
+#if OLED
+    oled.displayWifi(ssid);
+#endif
+  }
 
-  // Serial.printf("\nWiFi connected. IP address: ");
-  // Serial.println(WiFi.localIP());
+  Serial.printf("\nWiFi connected. IP address: ");
+  Serial.println(WiFi.localIP());
 
   // Listen for UDP packages
-  Serial.print("Listen for UDP packages on port: "); // can be done even without wifi connection
+  Serial.print("Listen for UDP packages on port: ");
   Serial.println(udpPortLocalRecieve);
   udp.begin(udpPortLocalRecieve);
+
+#if VESC
+  server.begin(); // TCP
+// delay(1000);
+// client = server.available();
+#endif
 
 #if WIND
   windSensor.setupWindDirEncoder();
@@ -201,50 +208,44 @@ void setup()
 
 #if BLADE
   bladePitchControl.setup();
-  
-#endif
-  
 
-  // configure time 
+#endif
+
+
+  // configure time
 
   WiFi.hostByName(addr, insertServerIP); // Define IPAddress object with the ip address string
 
   // Setup time sync with server att address
   configTzTime("0", addr); // https://github.com/espressif/arduino-esp32/issues/1114 & https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/system_time.html
 
-}
-
-
-
-boolean checkWifiAndTime() {
-  
-  if (WiFi.status() != WL_CONNECTED) {
-    // #if OLED
-    // oled.displayWifi(ssid);
-    // #endif  
-    return false;
-  }
-
-  if (newLocalTime() < 1e6 * 60 * 24 * 365)
+  while (newLocalTime() < 1e6 * 60 * 24 * 365)
   {
-    return false;
-    // no time;
-    // Serial.print("Get time from ");
-    // Serial.println(addr);
-    // delay(1000);
-// #if OLED
-//     oled.displayIP(addr);
-// #endif
+    Serial.print("Get time from ");
+    Serial.println(addr);
+    delay(1000);
+#if OLED
+    oled.displayIP(addr);
+#endif
   }
-  return true;
+
+
 }
 
+//**********************************
+//************ LOOP ****************
+//**********************************
+void loop()
+{
+  digitalWrite(LED_PIN, LOW);
 
-
-
-void wifiAndTimeLoop() {
-
-  
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.println("Connection failed, wait 5 sec...");
+    delay(5000);
+  }
+  else
+  {
 #if WIND
     doAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
 #endif
@@ -259,6 +260,8 @@ void wifiAndTimeLoop() {
 
 #if POWER && POWER_DUMP
     doAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
+    powerSensor.PowerControl();
+    powerSensor.Indicator();
 #endif
 
 #if RPM_HALL
@@ -282,29 +285,23 @@ void wifiAndTimeLoop() {
 #endif
 
 #if VESC
-
-  udp.parsePacket();
-  int n = udp.read(UDPInBuffer, 128);
-
-  if (n > 0) {
-    vescControl.updateRpmSetpoint(UDPInBuffer, n);
-  } else {
-    // Serial.println(".");
-    // delay(100);
-  }
-  doAtFrequency(controlVesc, vescControl.t0, vescControl.uploadFrequency);
-    
+    if (!client.connected()) // client = the TCP client who's going to send us something
+    {
+      client = server.available();
+    }
+    vescControl.updateRpmSetpoint(client);
+    doAtFrequency(controlVesc, vescControl.t0, vescControl.uploadFrequency);
 #endif
 
 #if BLADE
     //bladePitchControl.loop(udp, UDPInBuffer);
-
   udp.parsePacket();
   int n = udp.read(UDPInBuffer, 128);
 
   if (n > 0) {
     bladePitchControl.loop(UDPInBuffer, n);
-  } 
+  }
+
   doAtFrequency(sendBlade, bladePitchControl.t0 , bladePitchControl.uploadFrequency);
   // else {
   //   Serial.print(".");
@@ -313,33 +310,5 @@ void wifiAndTimeLoop() {
 
 #endif
 
-}
-
-void noWifiAndTimeLoop() {
-
-#if POWER && POWER_DUMP
-  if (powerSensor.noWifiLoopTimer.doRun()) {
-    powerSensor.readVoltageCurrent();
-    powerSensor.PowerControl();
-    powerSensor.Indicator();
-    Serial.println("PowerSensor NoFi");
   }
-#endif
-
 }
-
-
-//**********************************
-//************ LOOP ****************
-//**********************************
-void loop()
-{
-  //digitalWrite(LED_PIN, LOW);
-
-  if (checkWifiAndTime()) {
-    wifiAndTimeLoop();
-  }
-
-  noWifiAndTimeLoop();
-}
-

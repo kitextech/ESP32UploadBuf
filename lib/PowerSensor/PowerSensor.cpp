@@ -4,7 +4,7 @@
 PowerSensor::PowerSensor(uint8_t numSamples_, uint8_t voltagePin_, uint8_t currentPin_,
                          float b1_, float m1_, float b2_, float m2_, float bV_, float mV_, float bC_, float mC_,
                          uint16_t uploadFrequency_, uint16_t nofiLoopFrequency) :
-  noWifiLoopTimer(nofiLoopFrequency) // member initializer list. 
+  noWifiLoopTimer(nofiLoopFrequency) // member initializer list.
 {
   Serial.println("Created a power sensor");
   numSamples = numSamples_;
@@ -23,7 +23,7 @@ PowerSensor::PowerSensor(uint8_t numSamples_, uint8_t voltagePin_, uint8_t curre
 }
 PowerSensor::PowerSensor(uint8_t nSamples, uint8_t vPin, uint8_t cPin,
                          float b1_, float m1_, float b2_, float m2_, float bV_, float mV_, float bC_, float mC_,
-                         uint16_t uploadFrequency_, float minVolt, float maxVolt, uint8_t dumpPin1, uint8_t dumpPin2, uint8_t dumpPin3, uint8_t dumpPin4, uint16_t nofiLoopFrequency):
+                         uint16_t uploadFrequency_, float minVolt, float maxVolt, uint8_t dumpPin1, uint8_t dumpPin2, uint8_t dumpPin3, uint8_t dumpPin4, uint8_t chargePin, uint16_t nofiLoopFrequency):
                          noWifiLoopTimer(nofiLoopFrequency)
 {
   Serial.println("Created a power sensor");
@@ -55,7 +55,7 @@ void PowerSensor::readVoltageCurrent()
   // take a number of analog samples and add them up
   sumV = 0;
   sumC = 0;
-  
+
   for (uint8_t i = 0; i < numSamples; i++)
   {
     sumV += analogRead(voltagePin);
@@ -125,40 +125,46 @@ void PowerSensor::PowerDumpSetup()
   pinMode(GREEN_LED, OUTPUT);
   pinMode(RED_LED, OUTPUT);
   pinMode(DigitalPin4, OUTPUT);
+  pinMode(chargePin, OUTPUT);
   status_indicator = AUTOMATIC_DUMP_OFF;
   Serial.println("Successfully set up the output pins for Power Dump system");
 }
 
 void PowerSensor::PowerControl()
-{ 
+{
   if (status_indicator == MANUAL_DUMP_OFF && !(digitalRead(MANUAL_OVERRIDE_SWITCH))) {
     digitalWrite(DigitalPin4, LOW);
+    digitalWrite(chargePin, LOW);
     status_indicator = AUTOMATIC_DUMP_OFF;
   }
-  
+
   if (digitalRead(MANUAL_OVERRIDE_SWITCH))
   {
     digitalWrite(DigitalPin4, LOW);
+    digitalWrite(chargePin, LOW);
     status_indicator = MANUAL_DUMP_OFF;
     return;
   }
 
   if (voltage > 48) { // 4.0 V cell voltage at 12S
     digitalWrite(DigitalPin4, HIGH);
+    digitalWrite(chargePin, LOW);
     status_indicator = WARNING;
     return;
   }
-  
+
   if (voltage > BatMaxVolt)
   {
     // opening the gate
     digitalWrite(DigitalPin4, HIGH);
+    digitalWrite(chargePin, LOW);
     status_indicator = AUTOMATIC_DUMP_ON;
     return;
   }
 
-  if (voltage < 40.8) { // 3.4 cell voltage at 12S
+  if (voltage < 41.0) { // 3.4 cell voltage at 12S
     digitalWrite(DigitalPin4, LOW);
+    digitalWrite(chargePin, HIGH);
     status_indicator = WARNING;
     return;
   }
@@ -166,17 +172,18 @@ void PowerSensor::PowerControl()
   if (voltage < BatMinVolt)
   {
     digitalWrite(DigitalPin4, LOW);
+    digitalWrite(chargePin, LOW);
     status_indicator = AUTOMATIC_DUMP_OFF;
     return;
   }
-  
+
 }
 
 void PowerSensor::Indicator()
-{ 
-  
+{
+
   uint8_t blink = millis() / 200 % 2 == 0 ? HIGH : LOW;
-  
+
   switch (status_indicator)
   {
   case AUTOMATIC_DUMP_ON:

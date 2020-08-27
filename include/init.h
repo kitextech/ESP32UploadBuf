@@ -37,11 +37,11 @@ WindSensor windSensor(A2, 2, 0.4, 2, 0.2, 32.4, true, 3);
 #include <PowerSensor.h>
 //PowerSensor powerSensor(50, A2, A3, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1, 28.8, 36.0, A9, A10, A7, A12);
 // we need to remove three of the gates
-PowerSensor powerSensor(50, A3, A2, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1, 43.0, 46.8, A9, A10, A7, A12, 10);
+PowerSensor powerSensor(50, A3, A2, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1, 43.0, 46.8, A9, A10, A7, A12, A6, 10);
 #endif
 #if (POWER && !POWER_DUMP)
 #include <PowerSensor.h>
-PowerSensor powerSensor(50, A2, A3, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1);
+PowerSensor powerSensor(50, A3, A2, 0.12, 1, 0.8305, 0.7123, 0, 18.01, -1.866, 28.6856, 1);
 #endif
 #if RPM_HALL
 #include <HallSensor.h>
