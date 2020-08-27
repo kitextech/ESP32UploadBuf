@@ -16,19 +16,24 @@ using namespace std;
 
 // Sensor and vesc include statements
 #define IMU 0
+#define ACC 1
 #define WIND 0
-#define POWER 1
-#define POWER_DUMP 1 // power is required for power dump
+#define POWER 0
+#define POWER_DUMP 0 // power is required for power dump
 #define RPM_HALL 0
 #define TEMPERATURE 0
 #define FORCE 0
 #define OLED 0
-#define VESC 0
+#define VESC 1
 #define BLADE 0
 
 #if IMU
 #include <ImuSensor.h>
 ImuSensor imuSensor(40);
+#endif
+#if ACC
+#include <AccSensor.h>
+AccSensor accSensor(33); // update delay
 #endif
 #if WIND
 #include <WindSensor.h>
@@ -65,7 +70,7 @@ Oled oled(5);
 #endif
 #if VESC
 #include <VescControl.h>
-VescControl vescControl(30);
+VescControl vescControl(10);
 #endif
 
 #if BLADE
@@ -82,10 +87,10 @@ BladePitchControl bladePitchControl(servo1Pin, servo2Pin, servo3Pin, 5);
 // WiFi
 const char *password = "morepower";
 
-// const char *ssid = "kitex"; // "kitex"; // use kitexField
-// const char *addr = "192.168.8.152"; // Andreas' laptop on kitex
-const char *ssid = "kitexField"; // "kitex"; // use kitexField
-const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
+const char *ssid = "kitex"; // "kitex"; // use kitexField
+const char *addr = "192.168.8.152"; // Andreas' laptop on kitex
+// const char *ssid = "kitexField"; // "kitex"; // use kitexField
+// const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
 
 // send upd data
 IPAddress insertServerIP;

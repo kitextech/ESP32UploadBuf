@@ -92,11 +92,13 @@ void VescControl::setRpm()
 
 void VescControl::runFirebaseCheck() {
 
-  // unsigned long start = millis();
-  //Serial.print("[HTTP] begin...\n");
+  unsigned long start = millis();
+  Serial.print("[HTTP] begin...\n");
   // configure traged server and url
   //http.begin("https://www.howsmyssl.com/a/check", ca); //HTTPS
   http.useHTTP10(true); // since we deserialize directly. // https://arduinojson.org/v6/how-to/use-arduinojson-with-esp8266httpclient/
+  
+  //http.begin("https://opentwt-6eadd.firebaseio.com/SpeedControl.json"); //HTTP
   http.begin("https://opentwt-6eadd.firebaseio.com/SpeedControl.json"); //HTTP
   //http.setTimeout() default timeout is 5000 ms.
   
@@ -123,7 +125,7 @@ void VescControl::runFirebaseCheck() {
   }
 
   http.end();
-  // Serial.println(millis()-start);
+  Serial.println(millis()-start);
 }
 
 

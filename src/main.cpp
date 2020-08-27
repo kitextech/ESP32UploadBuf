@@ -188,6 +188,9 @@ void setup()
 #if IMU
   imuSensor.setup();
 #endif
+#if ACC
+  accSensor.setup();
+#endif
 #if RPM_HALL
   hallSensor.setup();
 #endif
@@ -253,6 +256,18 @@ void wifiAndTimeLoop() {
     doAtFrequency(sendImu, imuSensor.t0, imuSensor.uploadFrequency);
 #endif
 
+#if ACC 
+  if (accSensor.doUpload.doRun() ) {
+      Imu imuData = accSensor.prepareData(newLocalTime()); // the Accelerometer can also send partial IMU data
+      protobufBridge.sendIMU(imuData);
+
+      udp.beginPacket(insertServerIP, udpPortRemoteInsert); // refactor later 
+      udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+      udp.endPacket();
+  }
+
+#endif
+
 #if POWER && !POWER_DUMP
     doAtFrequency(sendPower, powerSensor.t0, powerSensor.uploadFrequency);
 #endif
@@ -286,7 +301,7 @@ void wifiAndTimeLoop() {
   // check firebase if we should shut down or change speed
   if (vescControl.checkFirebase.doRun()) {
 
-    vescControl.runFirebaseCheck();
+    //vescControl.runFirebaseCheck();
   }
 
   // check the udp port for new speed settings
