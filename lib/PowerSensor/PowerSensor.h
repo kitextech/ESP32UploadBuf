@@ -18,11 +18,11 @@ public:
 
   PowerSensor(uint8_t numSamples_, uint8_t voltagePin_, uint8_t currentPin_,
               float b1_, float m1_, float b2_, float m2_, float bV_, float mV_, float bC_, float mC_,
-              uint16_t uploadFrequency_, uint16_t nofiLoopFrequency);
+              uint16_t uploadFrequency_, uint16_t nofiLoopPeriod);
 
   PowerSensor(uint8_t nSamples, uint8_t vPin, uint8_t cPin,
               float b1_, float m1_, float b2_, float m2_, float bV_, float mV_, float bC_, float mC_,
-              uint16_t uploadFrequency_, float minVolt, float maxVolt, uint8_t dumpPin1, uint8_t dumpPin2, uint8_t dumpPin3, uint8_t dumpPin4, uint16_t nofiLoopFrequency);
+              uint16_t uploadFrequency_, float minVolt, float maxVolt, uint8_t dumpPin1, uint8_t dumpPin2, uint8_t dumpPin3, uint8_t dumpPin4, uint16_t nofiLoopPeriod);
   
   Power prepareData(int64_t time);
   void readVoltageCurrent();

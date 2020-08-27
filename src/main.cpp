@@ -283,6 +283,13 @@ void wifiAndTimeLoop() {
 
 #if VESC
 
+  // check firebase if we should shut down or change speed
+  if (vescControl.checkFirebase.doRun()) {
+
+    vescControl.runFirebaseCheck();
+  }
+
+  // check the udp port for new speed settings
   udp.parsePacket();
   int n = udp.read(UDPInBuffer, 128);
 
@@ -292,6 +299,7 @@ void wifiAndTimeLoop() {
     // Serial.println(".");
     // delay(100);
   }
+
   doAtFrequency(controlVesc, vescControl.t0, vescControl.uploadFrequency);
     
 #endif
@@ -322,7 +330,6 @@ void noWifiAndTimeLoop() {
     powerSensor.readVoltageCurrent();
     powerSensor.PowerControl();
     powerSensor.Indicator();
-    Serial.println("PowerSensor NoFi");
   }
 #endif
 
@@ -337,7 +344,27 @@ void loop()
   //digitalWrite(LED_PIN, LOW);
 
   if (checkWifiAndTime()) {
-    wifiAndTimeLoop();
+    wifiAndTimeLoop(); 
+  }
+
+  if (wifiTimeReport.doRun() && !checkWifiAndTime()) {
+    Serial.println("Either wifi or timeserver missing");
+
+    if (WiFi.status() != WL_CONNECTED) { 
+      Serial.println("Cannot connect to");
+      Serial.println(addr);
+      Serial.println(password);
+    }
+
+    if (newLocalTime() < 1e6 * 60 * 24 * 365)
+    {
+      //no time;
+      Serial.print("Get time from isn't working");
+      Serial.println(addr);
+      Serial.println((int)newLocalTime());
+    }
+
+    
   }
 
   noWifiAndTimeLoop();

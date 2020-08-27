@@ -7,7 +7,7 @@ class Timer
 {
 public:
     // functions
-    Timer(int frequnecy);
+    Timer(unsigned long updatePeriod);
     boolean doRun();
 
 private:

@@ -1,8 +1,7 @@
 #include "Timer.h"
 
-Timer::Timer(int _frequency) {
-    updatePeriod = (unsigned long)( 1000 / _frequency);
-}
+Timer::Timer(unsigned long updateperiod) :
+updatePeriod(updateperiod) {}
 
 boolean Timer::doRun() {
     if (millis() - lastActivation >= updatePeriod) {

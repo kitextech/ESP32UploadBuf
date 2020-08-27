@@ -7,11 +7,15 @@
 #include <VescUart.h>
 #include <WiFi.h>
 #include <ProtobufBridge.h>
+#include <Timer.h>
 
 #include "./pb_encode.h"
 #include "./pb_decode.h"
+#include <ArduinoJson.h>
 
-#define MODE_ARRAY_LENGTH 5
+#include "esp_http_client.h" // not in use, but might be relevant if we want ASYNC HTTP requests
+#include <HTTPClient.h>
+#include <AsyncTCP.h>
 
 class VescControl
 {
@@ -20,13 +24,15 @@ public:
   void setup();
   Vesc prepareVescData(int64_t time);
   Setpoint prepareSetpointData(int64_t time);
-  int mode(int a[], int n);
-  void updateArray(int newElement, int n);
   void updateRpmSetpoint(uint8_t UDPInBuffer[], int n);
+  void updateRpmSetpoint(float RPM);
   void setRpm();
+  void runFirebaseCheck();
+  void runFirebaseCheckAsync();
+  void runAsyncClient();
+  String httpGETRequest();
 
   int t0;
-  uint16_t uploadFrequency;
   int t0_ramp;
   float rpmDiff;
   int rampingTime = 3000;
@@ -36,12 +42,18 @@ public:
   float rpmSetpoint = 0.0;
   float rpmRampStart = 0;
   float rampAcc = .7; // RPM/ms^2
-  int rpmSetpointArray[MODE_ARRAY_LENGTH] = {0};
-  float pidSUM = 0;
+  Timer checkFirebase;
+  float rpm_sp_udp;
+  uint16_t uploadFrequency;
+  float turbineGearRatio = 163.8; // 23.4*7
+
 
 private:
   uint8_t modeArrayLength;
   HardwareSerial SerialVesc{2};
   VescUart vesc;
+  StaticJsonDocument<64> firebaseControlDoc;
+  HTTPClient http; 
+
 };
 #endif

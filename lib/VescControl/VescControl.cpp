@@ -1,10 +1,10 @@
 #include "VescControl.h"
 
-VescControl::VescControl(uint16_t uploadFreq)
+VescControl::VescControl(uint16_t uploadFreq) :
+checkFirebase(20000),
+uploadFrequency(uploadFreq)
 {
-  uploadFrequency = uploadFreq;
   t0 = millis();
-  modeArrayLength = 5;
 }
 
 void VescControl::setup()
@@ -38,22 +38,6 @@ Setpoint VescControl::prepareSetpointData(int64_t time)
   return setpointData;
 }
 
-int VescControl::mode(int a[], int n) {
-   int maxValue = 0, maxCount = 0, i, j;
-   for (i = 0; i < n; ++i) {
-      int count = 0;
-      for (j = 0; j < n; ++j) {
-         if (a[j] == a[i])
-         ++count;
-      }
-      if (count > maxCount) {
-         maxCount = count;
-         maxValue = a[i];
-      }
-   }
-   return maxValue;
-}
-
 void VescControl::updateRpmSetpoint(uint8_t UDPInBuffer[], int n)
 {
 
@@ -67,25 +51,82 @@ void VescControl::updateRpmSetpoint(uint8_t UDPInBuffer[], int n)
   }
   else
   {
-    if (message.RPM != rpmSetpoint)
+    rpm_sp_udp = message.RPM;
+  }
+}
+
+void VescControl::updateRpmSetpoint(float RPM) {
+    if (RPM != rpmSetpoint)
     {
-      Serial.printf("RPM is set to %d\n", (int)message.RPM);  
+      Serial.printf("RPM is set to %d\n", (int) RPM);  
       rpmRampStart = vesc.data.rpm;
-      rpmDiff = message.RPM - rpmRampStart;
+      rpmDiff = RPM - rpmRampStart;
       t0_ramp = millis();
       rampingTime = abs((int)(rpmDiff * 1.0/rampAcc));
-      rpmSetpoint = message.RPM;
+      rpmSetpoint = RPM;
     }
-  }
 }
 
 void VescControl::setRpm()
 {
-    vesc.getVescValues();
+    // shoi
+    if (firebaseControlDoc["active"]) {
+      updateRpmSetpoint(firebaseControlDoc["speed"].as<float>()*turbineGearRatio);
+    } else {
+      updateRpmSetpoint(rpm_sp_udp);
+    }
+
+    vesc.getVescValues(); // could change to an algorithm that isn't sensitive to delays
     if (t0_ramp + rampingTime > millis())
       rpm_sp = (float(millis()) - float(t0_ramp)) / rampingTime * rpmDiff + ((float)rpmSetpoint - rpmDiff);
     else
       rpm_sp = rpmSetpoint;
 
     vesc.setRPM(rpm_sp);
+    
+    // temp
+    //runAsyncClient();
+}
+
+
+
+void VescControl::runFirebaseCheck() {
+
+  // unsigned long start = millis();
+  //Serial.print("[HTTP] begin...\n");
+  // configure traged server and url
+  //http.begin("https://www.howsmyssl.com/a/check", ca); //HTTPS
+  http.useHTTP10(true); // since we deserialize directly. // https://arduinojson.org/v6/how-to/use-arduinojson-with-esp8266httpclient/
+  http.begin("https://opentwt-6eadd.firebaseio.com/SpeedControl.json"); //HTTP
+  //http.setTimeout() default timeout is 5000 ms.
+  
+  // Serial.print("[HTTP] GET...\n");
+  // start connection and send HTTP header
+  int httpCode = http.GET();
+
+  // httpCode will be negative on error
+  if(httpCode > 0) {
+
+      // file found at server
+      if(httpCode == HTTP_CODE_OK) {
+          // String payload = http.getString(); // can not get string and get stream!
+          // Serial.println(payload);
+          deserializeJson(firebaseControlDoc, http.getStream());
+          //serializeJsonPretty(doc, Serial);
+      } else {
+        // HTTP header has been send and Server response header has been handled. Print non OK Code
+        Serial.printf("[HTTP] GET... code: %d\n", httpCode);
+
+      }
+  } else {
+      Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+  }
+
+  http.end();
+  // Serial.println(millis()-start);
+}
+
+
+void VescControl::runFirebaseCheckAsync() {
+
 }
