@@ -345,6 +345,7 @@ void noWifiAndTimeLoop() {
     powerSensor.readVoltageCurrent();
     powerSensor.PowerControl();
     powerSensor.Indicator();
+    powerSensor.chargeOnOff();
   }
 #endif
 

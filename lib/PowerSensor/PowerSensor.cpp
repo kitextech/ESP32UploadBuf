@@ -23,8 +23,9 @@ PowerSensor::PowerSensor(uint8_t numSamples_, uint8_t voltagePin_, uint8_t curre
 }
 PowerSensor::PowerSensor(uint8_t nSamples, uint8_t vPin, uint8_t cPin,
                          float b1_, float m1_, float b2_, float m2_, float bV_, float mV_, float bC_, float mC_,
-                         uint16_t uploadFrequency_, float minVolt, float maxVolt, uint8_t dumpPin1, uint8_t dumpPin2, uint8_t dumpPin3, uint8_t dumpPin4, uint16_t nofiLoopPeriod):
-                         noWifiLoopTimer(nofiLoopPeriod)
+                         uint16_t uploadFrequency_, float minVolt, float maxVolt, uint8_t dumpPin1, uint8_t dumpPin2, uint8_t dumpPin3, uint8_t dumpPin4, uint8_t chargePin, uint16_t nofiLoopPeriod):
+                         noWifiLoopTimer(nofiLoopPeriod),
+                         chargePin(chargePin)
 {
   Serial.println("Created a power sensor");
   numSamples = nSamples;
@@ -125,6 +126,8 @@ void PowerSensor::PowerDumpSetup()
   pinMode(GREEN_LED, OUTPUT);
   pinMode(RED_LED, OUTPUT);
   pinMode(DigitalPin4, OUTPUT);
+  pinMode(chargePin, OUTPUT);
+  digitalWrite(chargePin, LOW);
   status_indicator = AUTOMATIC_DUMP_OFF;
   Serial.println("Successfully set up the output pins for Power Dump system");
 }
@@ -198,5 +201,18 @@ void PowerSensor::Indicator()
     digitalWrite(GREEN_LED, blink);
     digitalWrite(RED_LED, blink);
     break;
+  }
+}
+
+void PowerSensor::chargeOnOff(){
+  //Threshold: Turn off if above 42V [charger limit], turn on if below
+  // Turn on if below 40V
+  if (voltage > 42.3){
+    digitalWrite(chargePin, LOW);
+    return; //Charger OFF
+  }
+  if (voltage < 40.3){
+    digitalWrite(chargePin, HIGH);
+    return;
   }
 }
