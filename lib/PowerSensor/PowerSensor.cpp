@@ -207,11 +207,11 @@ void PowerSensor::Indicator()
 void PowerSensor::chargeOnOff(){
   //Threshold: Turn off if above 42V [charger limit], turn on if below
   // Turn on if below 40V
-  if (voltage > 42.3){
+  if (voltage > 41.3){
     digitalWrite(chargePin, LOW);
     return; //Charger OFF
   }
-  if (voltage < 40.3){
+  if (voltage < 39.3){
     digitalWrite(chargePin, HIGH);
     return;
   }
