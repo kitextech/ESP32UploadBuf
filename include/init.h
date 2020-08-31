@@ -10,6 +10,10 @@
 #include "schema.pb.h"
 #include <Timer.h>
 
+#include <ESPmDNS.h>
+#include <WiFiUdp.h>
+#include <ArduinoOTA.h>
+
 using namespace std;
 
 #define LED_PIN 0
@@ -91,6 +95,8 @@ const char *ssid = "kitex"; // "kitex"; // use kitexField
 const char *addr = "192.168.8.152"; // Andreas' laptop on kitex
 // const char *ssid = "kitexField"; // "kitex"; // use kitexField
 // const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
+const char *hostname = "powerbox";
+
 
 // send upd data
 IPAddress insertServerIP;
@@ -105,3 +111,9 @@ uint8_t UDPInBuffer[128];
 
 // Timer for reporting wifi and time status
 Timer wifiTimeReport{10000}; // 10000 ms period
+Timer wifiReconnect{10000}; // 10000 ms period
+
+int wifiReconnectCount;
+
+// Ota 
+bool OTASetup = false;

@@ -94,6 +94,7 @@ void doAtFrequency(pleaseDo whatYouHaveToDo, int &t0, int uploadFrequency, int i
       udp.beginPacket(insertServerIP, udpPortRemoteInsert);
       udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
       udp.endPacket();
+
       break;
     }
 #endif
@@ -120,6 +121,8 @@ void doAtFrequency(pleaseDo whatYouHaveToDo, int &t0, int uploadFrequency, int i
     }
     if (whatYouHaveToDo != controlVesc && whatYouHaveToDo != updateOled)
     {
+      // Serial.println("hello");
+      
       udp.beginPacket(insertServerIP, udpPortRemoteInsert);
       udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
       udp.endPacket();
@@ -162,20 +165,8 @@ void setup()
   Serial.print("Connecting to ");
   Serial.println(ssid);
 
-  WiFi.mode(WIFI_STA); // Necessary?
+  WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
-
-//   while (WiFi.status() != WL_CONNECTED)
-//   {
-//     delay(500);
-//     Serial.print(".");
-// #if OLED
-//     oled.displayWifi(ssid);
-// #endif
-//   }
-
-  // Serial.printf("\nWiFi connected. IP address: ");
-  // Serial.println(WiFi.localIP());
 
   // Listen for UDP packages
   Serial.print("Listen for UDP packages on port: "); // can be done even without wifi connection
@@ -218,35 +209,138 @@ void setup()
 }
 
 
+//**********************************
+//************ SETUP OTA ****************
+//**********************************
 
-boolean checkWifiAndTime() {
+void setupOTA()
+{
+    // Port defaults to 3232
+  // ArduinoOTA.setPort(3232);
+
+  // Hostname defaults to esp3232-[MAC]
+  ArduinoOTA.setHostname(hostname);
+
+  // No authentication by default
+  ArduinoOTA.setPassword("morepower");
+
+  // Password can be set with it's md5 value as well
+  // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
+  // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
+
+  ArduinoOTA
+    .onStart([]() {
+      String type;
+      if (ArduinoOTA.getCommand() == U_FLASH)
+        type = "sketch";
+      else // U_SPIFFS
+        type = "filesystem";
+
+      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+      Serial.println("Start updating " + type);
+    })
+    .onEnd([]() {
+      Serial.println("\nEnd");
+    })
+    .onProgress([](unsigned int progress, unsigned int total) {
+      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+    })
+    .onError([](ota_error_t error) {
+      Serial.printf("Error[%u]: ", error);
+      if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+      else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+      else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+      else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+      else if (error == OTA_END_ERROR) Serial.println("End Failed");
+    });
+
+  ArduinoOTA.begin();
+
+  Serial.println("Ready");
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+  Serial.print("Hostname: ");
+  Serial.print(ArduinoOTA.getHostname());
+  Serial.println(".local");
+  OTASetup = true;
+}
+
+void reconnectToWifi() {
+
+    // wifi down, reconnect here
+  if (wifiReconnectCount == 10) {
+    switch (WiFi.status())
+      {
+      case WL_IDLE_STATUS:
+        Serial.printf("WL_IDLE_STATUS");
+        break;
+      case WL_NO_SSID_AVAIL:
+        Serial.printf("WL_NO_SSID_AVAIL");
+        break;
+      case WL_SCAN_COMPLETED:
+        Serial.printf("WL_SCAN_COMPLETED");
+        break;
+      case WL_CONNECTED:
+        Serial.printf("WL_CONNECTED");
+        break;
+      case WL_CONNECT_FAILED:
+        Serial.printf("WL_CONNECT_FAILED");
+        break;
+      case WL_DISCONNECTED:
+        Serial.printf("WL_DISCONNECTED");
+        break;
+      
+      default:
+        break;
+      }
+    WiFi.begin();
+    Serial.println("Call to Wifi Begin");
+    wifiReconnectCount = 0;
+  }
+  wifiReconnectCount++;
+}
+
+boolean checkWifi(bool reportStatus) {
   
   if (WiFi.status() != WL_CONNECTED) {
-    // #if OLED
-    // oled.displayWifi(ssid);
-    // #endif  
-    return false;
-  }
+    if (wifiReconnect.doRun()) {
+      reconnectToWifi();
+    }
 
-  if (newLocalTime() < 1e6 * 60 * 24 * 365)
-  {
+    if (reportStatus) {
+      Serial.println("not connected to WIFI");
+    }
     return false;
-    // no time;
-    // Serial.print("Get time from ");
-    // Serial.println(addr);
-    // delay(1000);
-// #if OLED
-//     oled.displayIP(addr);
-// #endif
   }
   return true;
 }
 
 
 
+boolean checkTime(bool reportStatus) {
+  
+  if (newLocalTime() < 1e6 * 60 * 24 * 365)
+  { 
+    if (reportStatus) {
+      Serial.print("Get time from ");
+      Serial.print(addr);
+      Serial.println(" ...");
+    }
+    return false;
+  }
+  return true;
+}
+
+
+void wifiLoop() {
+  if (!OTASetup) {
+    setupOTA();
+  }
+  ArduinoOTA.handle();
+}
+
 
 void wifiAndTimeLoop() {
-
   
 #if WIND
     doAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
@@ -356,31 +450,14 @@ void noWifiAndTimeLoop() {
 //************ LOOP ****************
 //**********************************
 void loop()
-{
-  //digitalWrite(LED_PIN, LOW);
+{ 
+  
+  if ( checkWifi( wifiTimeReport.doRun() ) ) {
+    wifiLoop();
 
-  if (checkWifiAndTime()) {
-    wifiAndTimeLoop(); 
-  }
-
-  if (wifiTimeReport.doRun() && !checkWifiAndTime()) {
-    Serial.println("Either wifi or timeserver missing");
-
-    if (WiFi.status() != WL_CONNECTED) { 
-      Serial.println("Cannot connect to");
-      Serial.println(addr);
-      Serial.println(password);
+    if (checkTime( wifiTimeReport.doRun()  )) {
+      wifiAndTimeLoop();
     }
-
-    if (newLocalTime() < 1e6 * 60 * 24 * 365)
-    {
-      //no time;
-      Serial.print("Get time from isn't working");
-      Serial.println(addr);
-      Serial.println((int)newLocalTime());
-    }
-
-    
   }
 
   noWifiAndTimeLoop();
