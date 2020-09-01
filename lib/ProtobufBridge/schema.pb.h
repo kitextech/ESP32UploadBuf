@@ -23,13 +23,22 @@ typedef enum _Wrapper_DataType {
     Wrapper_DataType_WIND = 5,
     Wrapper_DataType_VESC = 6,
     Wrapper_DataType_SETPOINT = 7,
-    Wrapper_DataType_BLADE = 8
+    Wrapper_DataType_BLADE = 8,
+    Wrapper_DataType_TURBINECONTROL = 9
 } Wrapper_DataType;
 
 typedef enum _Setpoint_Origin {
     Setpoint_Origin_WEB = 0,
     Setpoint_Origin_ESP = 1
 } Setpoint_Origin;
+
+typedef enum _TurbineControl_Command {
+    TurbineControl_Command_Stop = 0,
+    TurbineControl_Command_Auto = 1,
+    TurbineControl_Command_Speed = 2,
+    TurbineControl_Command_Pos = 3,
+    TurbineControl_Command_Current = 4
+} TurbineControl_Command;
 
 /* Struct definitions */
 typedef struct _BladeControl {
@@ -76,6 +85,12 @@ typedef struct _Temperature {
     float temperature;
 } Temperature;
 
+typedef struct _TurbineControl {
+    int64_t time;
+    float value;
+    TurbineControl_Command command;
+} TurbineControl;
+
 typedef struct _Vector3 {
     float x;
     float y;
@@ -119,12 +134,16 @@ typedef struct _Imu {
 
 /* Helper constants for enums */
 #define _Wrapper_DataType_MIN Wrapper_DataType_SPEED
-#define _Wrapper_DataType_MAX Wrapper_DataType_BLADE
-#define _Wrapper_DataType_ARRAYSIZE ((Wrapper_DataType)(Wrapper_DataType_BLADE+1))
+#define _Wrapper_DataType_MAX Wrapper_DataType_TURBINECONTROL
+#define _Wrapper_DataType_ARRAYSIZE ((Wrapper_DataType)(Wrapper_DataType_TURBINECONTROL+1))
 
 #define _Setpoint_Origin_MIN Setpoint_Origin_WEB
 #define _Setpoint_Origin_MAX Setpoint_Origin_ESP
 #define _Setpoint_Origin_ARRAYSIZE ((Setpoint_Origin)(Setpoint_Origin_ESP+1))
+
+#define _TurbineControl_Command_MIN TurbineControl_Command_Stop
+#define _TurbineControl_Command_MAX TurbineControl_Command_Current
+#define _TurbineControl_Command_ARRAYSIZE ((TurbineControl_Command)(TurbineControl_Command_Current+1))
 
 
 /* Initializer values for message structs */
@@ -140,6 +159,7 @@ typedef struct _Imu {
 #define Vesc_init_default                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 #define Setpoint_init_default                    {0, 0, 0, _Setpoint_Origin_MIN}
 #define BladeControl_init_default                {0, 0, 0, 0, 0}
+#define TurbineControl_init_default              {0, 0, _TurbineControl_Command_MIN}
 #define Wrapper_init_zero                        {_Wrapper_DataType_MIN, {{NULL}, NULL}}
 #define Speed_init_zero                          {0, 0}
 #define Force_init_zero                          {0, 0, 0}
@@ -152,6 +172,7 @@ typedef struct _Imu {
 #define Vesc_init_zero                           {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 #define Setpoint_init_zero                       {0, 0, 0, _Setpoint_Origin_MIN}
 #define BladeControl_init_zero                   {0, 0, 0, 0, 0}
+#define TurbineControl_init_zero                 {0, 0, _TurbineControl_Command_MIN}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define BladeControl_time_tag                    1
@@ -177,6 +198,9 @@ typedef struct _Imu {
 #define Speed_RPM_tag                            2
 #define Temperature_time_tag                     1
 #define Temperature_temperature_tag              2
+#define TurbineControl_time_tag                  1
+#define TurbineControl_value_tag                 2
+#define TurbineControl_command_tag               3
 #define Vector3_x_tag                            1
 #define Vector3_y_tag                            2
 #define Vector3_z_tag                            3
@@ -297,6 +321,13 @@ X(a, STATIC,   SINGULAR, FLOAT,    collectivePitch,   5)
 #define BladeControl_CALLBACK NULL
 #define BladeControl_DEFAULT NULL
 
+#define TurbineControl_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, INT64,    time,              1) \
+X(a, STATIC,   SINGULAR, FLOAT,    value,             2) \
+X(a, STATIC,   SINGULAR, UENUM,    command,           3)
+#define TurbineControl_CALLBACK NULL
+#define TurbineControl_DEFAULT NULL
+
 extern const pb_msgdesc_t Wrapper_msg;
 extern const pb_msgdesc_t Speed_msg;
 extern const pb_msgdesc_t Force_msg;
@@ -309,6 +340,7 @@ extern const pb_msgdesc_t Quaternion_msg;
 extern const pb_msgdesc_t Vesc_msg;
 extern const pb_msgdesc_t Setpoint_msg;
 extern const pb_msgdesc_t BladeControl_msg;
+extern const pb_msgdesc_t TurbineControl_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define Wrapper_fields &Wrapper_msg
@@ -323,6 +355,7 @@ extern const pb_msgdesc_t BladeControl_msg;
 #define Vesc_fields &Vesc_msg
 #define Setpoint_fields &Setpoint_msg
 #define BladeControl_fields &BladeControl_msg
+#define TurbineControl_fields &TurbineControl_msg
 
 /* Maximum encoded size of messages (where known) */
 /* Wrapper_size depends on runtime parameters */
@@ -337,6 +370,7 @@ extern const pb_msgdesc_t BladeControl_msg;
 #define Vesc_size                                74
 #define Setpoint_size                            23
 #define BladeControl_size                        31
+#define TurbineControl_size                      18
 
 #ifdef __cplusplus
 } /* extern "C" */

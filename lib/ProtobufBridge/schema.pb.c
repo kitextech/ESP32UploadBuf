@@ -42,6 +42,10 @@ PB_BIND(Setpoint, Setpoint, AUTO)
 PB_BIND(BladeControl, BladeControl, AUTO)
 
 
+PB_BIND(TurbineControl, TurbineControl, AUTO)
+
+
+
 
 
 

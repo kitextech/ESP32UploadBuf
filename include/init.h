@@ -2,7 +2,6 @@
 #include <iostream>
 #include <WiFi.h>
 #include <time.h>
-#include <ProtobufBridge.h>
 
 #include <stdio.h>
 #include "./pb_encode.h"
@@ -13,6 +12,7 @@
 #include <ESPmDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
+#include <ProtobufBridge.h>
 
 using namespace std;
 
@@ -20,15 +20,15 @@ using namespace std;
 
 // Sensor and vesc include statements
 #define IMU 0
-#define ACC 0
+#define ACC 1
 #define WIND 0
-#define POWER 1
-#define POWER_DUMP 1 // power is required for power dump
+#define POWER 0
+#define POWER_DUMP 0 // power is required for power dump
 #define RPM_HALL 0
 #define TEMPERATURE 0
 #define FORCE 0
 #define OLED 0
-#define VESC 0
+#define VESC 1
 #define BLADE 0
 
 #if IMU
@@ -74,7 +74,7 @@ Oled oled(5);
 #endif
 #if VESC
 #include <VescControl.h>
-VescControl vescControl(10);
+VescControl vescControl;
 #endif
 
 #if BLADE
@@ -95,14 +95,14 @@ const char *ssid = "kitex"; // "kitex"; // use kitexField
 const char *addr = "192.168.8.152"; // Andreas' laptop on kitex
 // const char *ssid = "kitexField"; // "kitex"; // use kitexField
 // const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
-const char *hostname = "powerbox";
+const char *hostname = "bluemotor";
 
 
 // send upd data
 IPAddress insertServerIP;
 unsigned int udpPortRemoteInsert = 10102;
 WiFiUDP udp;
-ProtobufBridge protobufBridge;
+ProtobufBridge protobufBridge; // not initialized correctly. Wait for setup!
 
 // recieve upd data
 unsigned int udpPortLocalRecieve = 10102;

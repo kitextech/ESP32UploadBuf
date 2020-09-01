@@ -81,20 +81,6 @@ void doAtFrequency(pleaseDo whatYouHaveToDo, int &t0, int uploadFrequency, int i
 #if VESC
     case controlVesc:
     {
-      vescControl.setRpm();
-
-      Vesc vescData = vescControl.prepareVescData(newLocalTime());
-      protobufBridge.sendVesc(vescData);
-      udp.beginPacket(insertServerIP, udpPortRemoteInsert);
-      udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-      udp.endPacket();
-
-      Setpoint setpointData = vescControl.prepareSetpointData(newLocalTime());
-      protobufBridge.sendSetpoint(setpointData);
-      udp.beginPacket(insertServerIP, udpPortRemoteInsert);
-      udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
-      udp.endPacket();
-
       break;
     }
 #endif
@@ -143,19 +129,7 @@ void setup()
   {
     ;
   }
-
-#if VESC
-  vescControl.setup();
-#endif
-
-#if POWER_DUMP
-  powerSensor.PowerDumpSetup();
-#endif
-#if OLED
-  oled.setup();
-#endif
-
-  pinMode(LED_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT); // really?
 
   delay(10);
 
@@ -172,6 +146,28 @@ void setup()
   Serial.print("Listen for UDP packages on port: "); // can be done even without wifi connection
   Serial.println(udpPortLocalRecieve);
   udp.begin(udpPortLocalRecieve);
+
+  // configure protobridge 
+  WiFi.hostByName(addr, insertServerIP); // Define IPAddress object with the ip address string
+  // = ProtobufBridge(udp, insertServerIP, udpPortRemoteInsert);
+  protobufBridge.udp = &udp;
+  protobufBridge.serverip = insertServerIP;
+  protobufBridge.serverport = udpPortRemoteInsert;
+  // Setup time sync with server att address
+  configTzTime("0", addr); // https://github.com/espressif/arduino-esp32/issues/1114 & https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/system_time.html
+
+#if VESC
+  vescControl.setup(protobufBridge);
+#endif
+
+#if POWER_DUMP
+  powerSensor.PowerDumpSetup();
+#endif
+#if OLED
+  oled.setup();
+#endif
+
+
 
 #if WIND
   windSensor.setupWindDirEncoder();
@@ -198,14 +194,6 @@ void setup()
   
 #endif
   
-
-  // configure time 
-
-  WiFi.hostByName(addr, insertServerIP); // Define IPAddress object with the ip address string
-
-  // Setup time sync with server att address
-  configTzTime("0", addr); // https://github.com/espressif/arduino-esp32/issues/1114 & https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/system_time.html
-
 }
 
 
@@ -265,6 +253,10 @@ void setupOTA()
   OTASetup = true;
 }
 
+//**********************************
+//************ ReconnectoToWifi ****************
+//**********************************
+
 void reconnectToWifi() {
 
     // wifi down, reconnect here
@@ -300,6 +292,12 @@ void reconnectToWifi() {
   wifiReconnectCount++;
 }
 
+
+//**********************************
+//************ Check Wifi ****************
+//**********************************
+
+
 boolean checkWifi(bool reportStatus) {
   
   if (WiFi.status() != WL_CONNECTED) {
@@ -315,7 +313,9 @@ boolean checkWifi(bool reportStatus) {
   return true;
 }
 
-
+//**********************************
+//************ Check Time ****************
+//**********************************
 
 boolean checkTime(bool reportStatus) {
   
@@ -332,6 +332,10 @@ boolean checkTime(bool reportStatus) {
 }
 
 
+//**********************************
+//************ Wifi Loop ****************
+//**********************************
+
 void wifiLoop() {
   if (!OTASetup) {
     setupOTA();
@@ -339,8 +343,13 @@ void wifiLoop() {
   ArduinoOTA.handle();
 }
 
+//**********************************
+//************ Wifi And Time loop ****************
+//**********************************
 
 void wifiAndTimeLoop() {
+
+
   
 #if WIND
     doAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
@@ -392,25 +401,15 @@ void wifiAndTimeLoop() {
 
 #if VESC
 
-  // check firebase if we should shut down or change speed
-  if (vescControl.checkFirebase.doRun()) {
+  vescControl.loopWifiAndTime(newLocalTime());
 
-    //vescControl.runFirebaseCheck();
-  }
-
-  // check the udp port for new speed settings
+  // check the udp port for new turbine control settings
   udp.parsePacket();
   int n = udp.read(UDPInBuffer, 128);
-
   if (n > 0) {
-    vescControl.updateRpmSetpoint(UDPInBuffer, n);
-  } else {
-    // Serial.println(".");
-    // delay(100);
-  }
+    vescControl.updateTurbineControl(UDPInBuffer, n);
+  } 
 
-  doAtFrequency(controlVesc, vescControl.t0, vescControl.uploadFrequency);
-    
 #endif
 
 #if BLADE
@@ -432,6 +431,10 @@ void wifiAndTimeLoop() {
 
 }
 
+//**********************************
+//************ No Wifi and Time Loop ****************
+//**********************************
+
 void noWifiAndTimeLoop() {
 
 #if POWER && POWER_DUMP
@@ -443,8 +446,11 @@ void noWifiAndTimeLoop() {
   }
 #endif
 
-}
+#if VESC
+  vescControl.loop();
+#endif
 
+}
 
 //**********************************
 //************ LOOP ****************
@@ -456,6 +462,8 @@ void loop()
     wifiLoop();
 
     if (checkTime( wifiTimeReport.doRun()  )) {
+      
+      
       wifiAndTimeLoop();
     }
   }

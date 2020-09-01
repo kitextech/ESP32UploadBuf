@@ -20,40 +20,22 @@
 class VescControl
 {
 public:
-  VescControl(uint16_t uploadFreq);
-  void setup();
-  Vesc prepareVescData(int64_t time);
-  Setpoint prepareSetpointData(int64_t time);
-  void updateRpmSetpoint(uint8_t UDPInBuffer[], int n);
-  void updateRpmSetpoint(float RPM);
-  void setRpm();
-  void runFirebaseCheck();
-  void runFirebaseCheckAsync();
-  void runAsyncClient();
-  String httpGETRequest();
+  VescControl();
+  void setup(ProtobufBridge proto);
+  void updateTurbineControl(uint8_t UDPInBuffer[], int n);
+  void loopWifiAndTime(int64_t time);
+  void loop();
 
-  int t0;
-  int t0_ramp;
-  float rpmDiff;
-  int rampingTime = 3000;
-  float rpm_sp = 0;
-  float maxCurrent = 5;
-  float minCurrent = -45;
-  float rpmSetpoint = 0.0;
-  float rpmRampStart = 0;
-  float rampAcc = .7; // RPM/ms^2
-  Timer checkFirebase;
-  float rpm_sp_udp;
-  uint16_t uploadFrequency;
-  float turbineGearRatio = 163.8; // 23.4*7
-
+  Timer readVesc{100};
+  Timer uploadData{100};
 
 private:
-  uint8_t modeArrayLength;
   HardwareSerial SerialVesc{2};
   VescUart vesc;
-  StaticJsonDocument<64> firebaseControlDoc;
-  HTTPClient http; 
+  Vesc prepareVescData(int64_t time);
+  Setpoint prepareSetpointData(int64_t time);
+  TurbineControl control;
+  ProtobufBridge protobridge;
 
 };
 #endif

@@ -285,6 +285,13 @@ void ProtobufBridge::sendVesc(Vesc vesc)
 
   wrapMessageLength = stream.bytes_written;
 
+  sendPacket();
+      // Setpoint setpointData = vescControl.prepareSetpointData(newLocalTime());
+      // protobufBridge.sendSetpoint(setpointData);
+      // udp.beginPacket(insertServerIP, udpPortRemoteInsert);
+      // udp.write(protobufBridge.bufferWrapper, protobufBridge.wrapMessageLength);
+      // udp.endPacket();
+
   // Serial.print("Message Length wrapper: ");
   // Serial.println(stream.bytes_written);
 }
@@ -364,4 +371,10 @@ void ProtobufBridge::sendSetpoint(Setpoint setpoint)
 
   // Serial.print("Message Length wrapper: ");
   // Serial.println(stream.bytes_written);
+}
+
+void ProtobufBridge::sendPacket() {
+  udp->beginPacket(serverip, serverport);
+  udp->write(bufferWrapper, wrapMessageLength);
+  udp->endPacket();
 }
