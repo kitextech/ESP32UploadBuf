@@ -4,7 +4,7 @@ VescControl::VescControl()
 {
 }
 
-void VescControl::setup(ProtobufBridge proto)
+void VescControl::setup(ProtobufBridge proto) //Fixme pass by value. Lucky that it work
 {
   SerialVesc.begin(115200, SERIAL_8N1, 16, 17);
   vesc.setSerialPort(&SerialVesc);
@@ -33,7 +33,7 @@ Setpoint VescControl::prepareSetpointData(int64_t time)
 {
   Setpoint setpointData Setpoint_init_zero;
   setpointData.time = time;
-  setpointData.RPM = rpm_sp;
+  setpointData.RPM = rpmsetpoint;//rpm_sp;
   setpointData.current = 0;
   return setpointData;
 }
@@ -71,17 +71,21 @@ void VescControl::loop(){
       break;
     case TurbineControl_Command_Speed: 
       {
-        // set the RPM at maximum 100 eRPM from the current eRPM
-        long rpmsetpoint = (long) control.value;
-        int delta = (int) (rpmsetpoint - vesc.data.rpm);
-        delta = min(delta, 100);
-        delta = max(-100, delta);
-        float target = (float) (vesc.data.rpm + delta);
+        // change the rpm by 100 eRPM every time the function is run.. // set the RPM at maximum 100 eRPM from the current eRPM
+        float rpmTarget = control.value;
+
+        // long rpmsetpoint = (long) control.value;
+        float delta = rpmTarget - rpmsetpoint;
+        delta = min(delta, 200.0f);
+        delta = max(-200.0f, delta);
+        rpmsetpoint = rpmsetpoint + delta;
         
-        if (rpmsetpoint > 1500 && target <= 1500) {
-          target = 1500;
-        }
-        vesc.setRPM( target );
+        // if (rpmsetpoint > 1500 && target <= 1500) {
+        //   target = 1500;
+        // }
+        // rpmsetpoint = control.value;
+
+        vesc.setRPM( rpmsetpoint );
         break;
       }
     case TurbineControl_Command_Current:
@@ -103,6 +107,7 @@ void VescControl::loopWifiAndTime(int64_t time){
   if (uploadData.doRun()) {
     //send vesc data to influx using protobridge
     protobridge.sendVesc(prepareVescData(time));
+    protobridge.sendSetpoint(prepareSetpointData(time));
   }
 
 

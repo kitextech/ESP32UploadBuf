@@ -36,6 +36,7 @@ private:
   Setpoint prepareSetpointData(int64_t time);
   TurbineControl control;
   ProtobufBridge protobridge;
+  float rpmsetpoint;
 
 };
 #endif

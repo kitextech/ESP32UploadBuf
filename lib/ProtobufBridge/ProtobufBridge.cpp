@@ -369,6 +369,7 @@ void ProtobufBridge::sendSetpoint(Setpoint setpoint)
 
   wrapMessageLength = stream.bytes_written;
 
+  sendPacket();
   // Serial.print("Message Length wrapper: ");
   // Serial.println(stream.bytes_written);
 }

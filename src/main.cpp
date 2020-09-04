@@ -78,12 +78,6 @@ void doAtFrequency(pleaseDo whatYouHaveToDo, int &t0, int uploadFrequency, int i
       break;
     }
 #endif
-#if VESC
-    case controlVesc:
-    {
-      break;
-    }
-#endif
 #if OLED
     case updateOled:
     {

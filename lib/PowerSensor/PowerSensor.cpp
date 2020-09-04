@@ -127,7 +127,7 @@ void PowerSensor::PowerDumpSetup()
   pinMode(RED_LED, OUTPUT);
   pinMode(DigitalPin4, OUTPUT);
   pinMode(chargePin, OUTPUT);
-  digitalWrite(chargePin, LOW);
+  digitalWrite(chargePin, HIGH);
   status_indicator = AUTOMATIC_DUMP_OFF;
   Serial.println("Successfully set up the output pins for Power Dump system");
 }
@@ -208,11 +208,11 @@ void PowerSensor::chargeOnOff(){
   //Threshold: Turn off if above 42V [charger limit], turn on if below
   // Turn on if below 40V
   if (voltage > 41.3){
-    digitalWrite(chargePin, LOW);
+    digitalWrite(chargePin, HIGH);
     return; //Charger OFF
   }
   if (voltage < 39.3){
-    digitalWrite(chargePin, HIGH);
+    digitalWrite(chargePin, LOW);
     return;
   }
 }
