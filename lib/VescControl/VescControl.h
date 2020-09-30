@@ -20,7 +20,7 @@
 class VescControl
 {
 public:
-  VescControl();
+  VescControl(boolean doDump);
   void setup(ProtobufBridge proto);
   void updateTurbineControl(uint8_t UDPInBuffer[], int n);
   void loopWifiAndTime(int64_t time);
@@ -28,15 +28,19 @@ public:
 
   Timer readVesc{100};
   Timer uploadData{100};
+  Timer controlDump{1000};
 
 private:
   HardwareSerial SerialVesc{2};
   VescUart vesc;
   Vesc prepareVescData(int64_t time);
   Setpoint prepareSetpointData(int64_t time);
+  void controlVESC();
+  void controlDumping(float voltage);
   TurbineControl control;
   ProtobufBridge protobridge;
   float rpmsetpoint;
+  boolean doDump;
 
 };
 #endif

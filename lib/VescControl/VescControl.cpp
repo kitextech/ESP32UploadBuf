@@ -1,7 +1,15 @@
 #include "VescControl.h"
 
-VescControl::VescControl()
+#define DUMP_PIN A12
+
+VescControl::VescControl(boolean doDump) :
+doDump(doDump)
 {
+  if (doDump) {
+    pinMode(A12, OUTPUT); // Outpit pin A12
+    digitalWrite(DUMP_PIN, HIGH); // Output is inverted using a transitor to pull Mosfet High.
+    Serial.println("Set up the output pins for Power Dump system");
+  }
 }
 
 void VescControl::setup(ProtobufBridge proto) //Fixme pass by value. Lucky that it work
@@ -59,47 +67,67 @@ void VescControl::updateTurbineControl(uint8_t UDPInBuffer[], int n)
 void VescControl::loop(){
   // read values from VESC
   if (readVesc.doRun()) {
-    vesc.getVescValues();
-    
-    switch (control.command)
+    controlVESC();
+  }
+
+  if (doDump && controlDump.doRun()){
+    controlDumping(vesc.data.inpVoltage);
+  }
+}
+
+
+void VescControl::controlVESC() {
+  vesc.getVescValues();
+  switch (control.command)
+  {
+  case TurbineControl_Command_Stop:
+    vesc.setDuty(0);
+    break;
+  case TurbineControl_Command_Auto:
+    /* code */
+    break;
+  case TurbineControl_Command_Speed: 
     {
-    case TurbineControl_Command_Stop:
-      vesc.setDuty(0);
-      break;
-    case TurbineControl_Command_Auto:
-      /* code */
-      break;
-    case TurbineControl_Command_Speed: 
-      {
-        // change the rpm by 100 eRPM every time the function is run.. // set the RPM at maximum 100 eRPM from the current eRPM
-        float rpmTarget = control.value;
+      // change the rpm by 100 eRPM every time the function is run.. // set the RPM at maximum 100 eRPM from the current eRPM
+      float rpmTarget = control.value;
 
-        // long rpmsetpoint = (long) control.value;
-        float delta = rpmTarget - rpmsetpoint;
-        delta = min(delta, 200.0f);
-        delta = max(-200.0f, delta);
-        rpmsetpoint = rpmsetpoint + delta;
-        
-        // if (rpmsetpoint > 1500 && target <= 1500) {
-        //   target = 1500;
-        // }
-        // rpmsetpoint = control.value;
+      // long rpmsetpoint = (long) control.value;
+      float delta = rpmTarget - rpmsetpoint;
+      delta = min(delta, 200.0f);
+      delta = max(-200.0f, delta);
+      rpmsetpoint = rpmsetpoint + delta;
+      
+      // if (rpmsetpoint > 1500 && target <= 1500) {
+      //   target = 1500;
+      // }
+      // rpmsetpoint = control.value;
 
-        vesc.setRPM( rpmsetpoint );
-        break;
-      }
-    case TurbineControl_Command_Current:
-      vesc.setCurrent(control.value);
-      break;
-    
-    case TurbineControl_Command_Pos:
-        // not implemented yet!
-      break;
-    
-    default:
+      vesc.setRPM( rpmsetpoint );
       break;
     }
+  case TurbineControl_Command_Current:
+    vesc.setCurrent(control.value);
+    break;
+  
+  case TurbineControl_Command_Pos:
+      // not implemented yet!
+    break;
+  
+  default:
+    break;
   }
+}
+
+void VescControl::controlDumping(float voltage) {
+  if (voltage > 3.8*6) {
+    digitalWrite(DUMP_PIN, LOW); // Output is inverted using a transitor to pull Mosfet High
+    Serial.println("Dumping On");
+  } 
+
+  if (voltage < 3.6*6) {
+    digitalWrite(DUMP_PIN, HIGH); // Output is inverted using a transitor to pull Mosfet High
+      Serial.println("Dumping Off");
+  } 
 }
 
 void VescControl::loopWifiAndTime(int64_t time){
