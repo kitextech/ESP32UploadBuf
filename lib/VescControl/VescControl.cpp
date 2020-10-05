@@ -119,12 +119,12 @@ void VescControl::controlVESC() {
 }
 
 void VescControl::controlDumping(float voltage) {
-  if (voltage > 3.8*6) {
+  if (voltage > 3.8*12) {
     digitalWrite(DUMP_PIN, LOW); // Output is inverted using a transitor to pull Mosfet High
     Serial.println("Dumping On");
   } 
 
-  if (voltage < 3.6*6) {
+  if (voltage < 3.5*12) {
     digitalWrite(DUMP_PIN, HIGH); // Output is inverted using a transitor to pull Mosfet High
       Serial.println("Dumping Off");
   } 
