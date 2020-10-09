@@ -91,7 +91,8 @@ void VescControl::controlVESC() {
   case TurbineControl_Command_Speed: 
     {
       // change the rpm by 200 eRPM every time the function is run.. // set the RPM at maximum 200 eRPM from the current eRPM
-      float rpmTarget = control.value;
+      float rpmTarget = control.value*RPM_TO_ERPM;
+;
 
       // long rpmsetpoint = (long) control.value;
       float delta = rpmTarget - rpmsetpoint;

@@ -24,8 +24,12 @@ void SpeedController::controlOptimalPower(VescUart &vesc, float &currentSetpoint
     float torque = omega*omega*torqueCoefficient; // 0.1176;
     float current = torque/-1.6; // T / I = -1.6 => I = T/ -1.6 // from influx db. 
 
-    if (current < 0) {
+    if (current > 0 ) { // no positive current! 
         current = 0;
+    }
+
+    if (vesc.data.rpm < 0) { // if we for some reason are turning backwards: ground handling, test ect.
+        current = -current;
     }
 
     if (transitionIndex < 10) { // phase new current in slowly

@@ -20,7 +20,7 @@ using namespace std;
 
 // Sensor and vesc include statements
 #define IMU 0
-#define ACC 1
+#define ACC 0
 #define WIND 0
 #define POWER 0
 #define POWER_DUMP 0 // power is required for power dump
@@ -74,7 +74,7 @@ Oled oled(5);
 #endif
 #if VESC
 #include <VescControl.h>
-VescControl vescControl(true);
+VescControl vescControl(false);
 #endif
 
 #if BLADE
@@ -96,11 +96,11 @@ const char *password = "morepower";
 const char *ssid = "kitexField"; // "kitex"; // use kitexField
 // const char *ssid = "KiteX Workshop"; // "kitex"; // use kitexField
 // const char *addr = "192.168.8.126"; // Pi' on kitexField
-const char *addr = "192.168.8.127"; // Andreas' laptop on kitexField
+const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
 // const char *hostname = "powerbox";
 // const char *hostname = "motor1";
 // const char *hostname = "bluemotor";
-const char *hostname = "motor3";
+const char *hostname = "motor1";
 
 
 

@@ -18,6 +18,9 @@
 #include <AsyncTCP.h>
 #include "SpeedController.h"
 
+#define RPM_TO_ERPM 163.8f
+
+
 class VescControl
 {
 public:
