@@ -20,7 +20,7 @@ using namespace std;
 
 // Sensor and vesc include statements
 #define IMU 0
-#define ACC 0
+#define ACC 1
 #define WIND 0
 #define POWER 0
 #define POWER_DUMP 0 // power is required for power dump
@@ -100,7 +100,9 @@ const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
 // const char *hostname = "powerbox";
 // const char *hostname = "motor1";
 // const char *hostname = "bluemotor";
-const char *hostname = "motor1";
+const char *hostname = "motor2";
+
+// const char *hostname = "motor3";
 
 
 
