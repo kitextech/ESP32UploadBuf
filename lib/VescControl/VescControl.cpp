@@ -42,7 +42,7 @@ Setpoint VescControl::prepareSetpointData(int64_t time)
   Setpoint setpointData Setpoint_init_zero;
   setpointData.time = time;
   setpointData.RPM = rpmsetpoint;//rpm_sp;
-  setpointData.current = 0;
+  setpointData.current = currentSetpoint;
   return setpointData;
 }
 
@@ -85,10 +85,12 @@ void VescControl::controlVESC() {
     break;
   case TurbineControl_Command_Auto:
     /* code */
+    speedController.doControlV1(vesc, currentSetpoint, control.value);
+    rpmsetpoint = (float) vesc.data.rpm;
     break;
   case TurbineControl_Command_Speed: 
     {
-      // change the rpm by 100 eRPM every time the function is run.. // set the RPM at maximum 100 eRPM from the current eRPM
+      // change the rpm by 200 eRPM every time the function is run.. // set the RPM at maximum 200 eRPM from the current eRPM
       float rpmTarget = control.value;
 
       // long rpmsetpoint = (long) control.value;

@@ -16,6 +16,7 @@
 #include "esp_http_client.h" // not in use, but might be relevant if we want ASYNC HTTP requests
 #include <HTTPClient.h>
 #include <AsyncTCP.h>
+#include "SpeedController.h"
 
 class VescControl
 {
@@ -40,7 +41,9 @@ private:
   TurbineControl control;
   ProtobufBridge protobridge;
   float rpmsetpoint;
+  float currentSetpoint;
   boolean doDump;
+  SpeedController speedController;
 
 };
 #endif
