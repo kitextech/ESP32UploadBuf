@@ -2,8 +2,9 @@
 
 #define DUMP_PIN A12
 
-VescControl::VescControl(boolean doDump) :
-doDump(doDump)
+VescControl::VescControl(boolean doDump, boolean rc_overwrite) :
+doDump(doDump),
+rc_overwrite(rc_overwrite)
 {
   if (doDump) {
     pinMode(A12, OUTPUT); // Outpit pin A12
@@ -78,6 +79,11 @@ void VescControl::loop(){
 
 void VescControl::controlVESC() {
   vesc.getVescValues();
+
+  if (rc_overwrite) {
+    return;
+  }
+
   switch (control.command)
   {
   case TurbineControl_Command_Stop:

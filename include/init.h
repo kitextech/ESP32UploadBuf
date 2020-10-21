@@ -74,7 +74,7 @@ Oled oled(5);
 #endif
 #if VESC
 #include <VescControl.h>
-VescControl vescControl(false);
+VescControl vescControl(false, true); // dumping, rc_overwrite
 #endif
 
 #if BLADE
@@ -100,9 +100,9 @@ const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
 // const char *hostname = "powerbox";
 // const char *hostname = "motor1";
 // const char *hostname = "bluemotor";
-const char *hostname = "motor2";
+// const char *hostname = "motor2";
 
-// const char *hostname = "motor3";
+const char *hostname = "passiveKiteMotor";
 
 
 

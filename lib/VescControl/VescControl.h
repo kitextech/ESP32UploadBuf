@@ -24,7 +24,7 @@
 class VescControl
 {
 public:
-  VescControl(boolean doDump);
+  VescControl(boolean doDump, boolean rc_overwrite); // rc_overwrite is mean to be used with the passive kite
   void setup(ProtobufBridge proto);
   void updateTurbineControl(uint8_t UDPInBuffer[], int n);
   void loopWifiAndTime(int64_t time);
@@ -46,6 +46,7 @@ private:
   float rpmsetpoint;
   float currentSetpoint;
   boolean doDump;
+  boolean rc_overwrite;
   SpeedController speedController;
 
 };
