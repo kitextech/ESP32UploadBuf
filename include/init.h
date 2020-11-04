@@ -20,7 +20,7 @@ using namespace std;
 
 // Sensor and vesc include statements
 #define IMU 0
-#define ACC 1
+#define ACC 0
 #define WIND 0
 #define POWER 0
 #define POWER_DUMP 0 // power is required for power dump
@@ -37,11 +37,11 @@ ImuSensor imuSensor(40);
 #endif
 #if ACC
 #include <AccSensor.h>
-AccSensor accSensor(33); // update delay
+AccSensor accSensor(200); // update delay
 #endif
 #if WIND
 #include <WindSensor.h>
-WindSensor windSensor(A2, 2, 0.4, 2, 0.2, 32.4, true, 3);
+WindSensor windSensor(A3);
 #endif
 #if (POWER && POWER_DUMP)
 #include <PowerSensor.h>
@@ -74,7 +74,7 @@ Oled oled(5);
 #endif
 #if VESC
 #include <VescControl.h>
-VescControl vescControl(false, true); // dumping, rc_overwrite
+VescControl vescControl(false, false); // dumping, rc_overwrite
 #endif
 
 #if BLADE
@@ -102,7 +102,9 @@ const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
 // const char *hostname = "bluemotor";
 // const char *hostname = "motor2";
 
-const char *hostname = "passiveKiteMotor";
+// const char *hostname = "passiveKiteMotor";
+const char *hostname = "motor1";
+
 
 
 

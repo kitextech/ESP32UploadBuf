@@ -86,6 +86,7 @@ void ProtobufBridge::sendWind(Wind wind)
     }
 
     wrapMessageLength = stream.bytes_written;
+    sendPacket();
 
     // Serial.print("Message Length wrapper: ");
     // Serial.println(stream.bytes_written);

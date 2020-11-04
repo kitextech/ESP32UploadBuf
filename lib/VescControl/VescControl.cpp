@@ -7,7 +7,7 @@ doDump(doDump),
 rc_overwrite(rc_overwrite)
 {
   if (doDump) {
-    pinMode(A12, OUTPUT); // Outpit pin A12
+    pinMode(DUMP_PIN, OUTPUT); // Outpit pin A12
     digitalWrite(DUMP_PIN, HIGH); // Output is inverted using a transitor to pull Mosfet High.
     Serial.println("Set up the output pins for Power Dump system");
   }

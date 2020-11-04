@@ -54,14 +54,6 @@ void doAtFrequency(pleaseDo whatYouHaveToDo, int &t0, int uploadFrequency, int i
       break;
     }
 #endif
-#if WIND
-    case sendWind:
-    {
-      Wind windData = windSensor.prepareData(newLocalTime());
-      protobufBridge.sendWind(windData);
-      break;
-    }
-#endif
 #if POWER
     case sendPower:
     {
@@ -163,8 +155,8 @@ void setup()
 
 
 
-#if WIND
-  windSensor.setupWindDirEncoder();
+#if WIND  
+  windSensor.setup(protobufBridge);
 #endif
 #if IMU
   imuSensor.setup();
@@ -346,7 +338,7 @@ void wifiAndTimeLoop() {
 
   
 #if WIND
-    doAtFrequency(sendWind, windSensor.t0, windSensor.uploadFrequency);
+    windSensor.loopWifiAndTime(newLocalTime());
 #endif
 
 #if IMU
@@ -442,6 +434,10 @@ void noWifiAndTimeLoop() {
 
 #if VESC
   vescControl.loop();
+#endif
+
+#if WIND
+  windSensor.loop();
 #endif
 
 }

@@ -30,8 +30,8 @@ public:
   void loopWifiAndTime(int64_t time);
   void loop();
 
-  Timer readVesc{100};
-  Timer uploadData{100};
+  Timer readVesc{100}; // normalyy 100 for TWT
+  Timer uploadData{100}; // normally 100 for TWT
   Timer controlDump{1000};
 
 private:
