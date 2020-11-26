@@ -5,20 +5,29 @@
 #include <schema.pb.h>
 #include <Adafruit_Sensor.h> // BNO-055
 #include <Adafruit_BNO055.h> // BNO-055
-
-#define BNO055_SAMPLERATE_DELAY_MS (10)
+#include <Timer.h>
+#include <ProtobufBridge.h>
 
 class ImuSensor
 {
   public:
-    ImuSensor(uint16_t uploadFreq);
-    Imu prepareData(int64_t time);
-    void setup();
+    ImuSensor();
+    void setup(ProtobufBridge bridge);
+
     
-    int t0;
-    uint16_t uploadFrequency;
+    Timer uploadTimer{10};
+    void loop();
+    void loopWifiAndTime(int64_t time);
+
 
   private:
+    ProtobufBridge protobridge;
+    Imu prepareData(int64_t time);
     Adafruit_BNO055 bno = Adafruit_BNO055{-1, 0x28};
+    void displaySensorDetails();
+    void displaySensorStatus();
+    void displayCalStatus();
+    Timer statusTimer{1000};
+
 };
 #endif

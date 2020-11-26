@@ -38,14 +38,6 @@ void doAtFrequency(pleaseDo whatYouHaveToDo, int &t0, int uploadFrequency, int i
       break;
     }
 #endif
-#if IMU
-    case sendImu:
-    {
-      Imu imuData = imuSensor.prepareData(newLocalTime());
-      protobufBridge.sendIMU(imuData);
-      break;
-    }
-#endif
 #if TEMPERATURE
     case sendTemperature:
     {
@@ -159,7 +151,7 @@ void setup()
   windSensor.setup(protobufBridge);
 #endif
 #if IMU
-  imuSensor.setup();
+  imuSensor.setup(protobufBridge);
 #endif
 #if ACC
   accSensor.setup();
@@ -342,7 +334,8 @@ void wifiAndTimeLoop() {
 #endif
 
 #if IMU
-    doAtFrequency(sendImu, imuSensor.t0, imuSensor.uploadFrequency);
+    imuSensor.loopWifiAndTime(newLocalTime());  
+    // doAtFrequency(sendImu, imuSensor.t0, imuSensor.uploadFrequency);
 #endif
 
 #if ACC 
@@ -461,3 +454,9 @@ void loop()
   noWifiAndTimeLoop();
 }
 
+      // unsigned long start = millis();
+      // Imu imuData = imuSensor.prepareData(newLocalTime());
+      // unsigned long next = millis();
+      // protobufBridge.sendIMU(imuData);
+      // unsigned long end = millis();
+      // Serial.println(end-next, next-start);

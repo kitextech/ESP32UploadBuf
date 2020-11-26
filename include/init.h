@@ -19,7 +19,7 @@ using namespace std;
 #define LED_PIN 0
 
 // Sensor and vesc include statements
-#define IMU 0
+#define IMU 1
 #define ACC 0
 #define WIND 0
 #define POWER 0
@@ -28,12 +28,12 @@ using namespace std;
 #define TEMPERATURE 0
 #define FORCE 0
 #define OLED 0
-#define VESC 1
+#define VESC 0
 #define BLADE 0
 
 #if IMU
 #include <ImuSensor.h>
-ImuSensor imuSensor(40);
+ImuSensor imuSensor;
 #endif
 #if ACC
 #include <AccSensor.h>
@@ -103,7 +103,8 @@ const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
 // const char *hostname = "motor2";
 
 // const char *hostname = "passiveKiteMotor";
-const char *hostname = "motor1";
+// const char *hostname = "motor1";
+const char *hostname = "imu1";
 
 
 
