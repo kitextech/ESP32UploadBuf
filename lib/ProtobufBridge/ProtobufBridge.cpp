@@ -45,10 +45,45 @@ void ProtobufBridge::sendIMU(Imu imu)
   }
 
   wrapMessageLength = stream.bytes_written;
-  sendPacket();
+  sendPacketBundle();
 
   // Serial.print("Message Length wrapper: ");
   // Serial.println(stream.bytes_written);
+}
+
+void ProtobufBridge::sendAccGyro(AccGyro accGyro)
+{
+  // create stream from the buffer
+  pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
+
+  // write IMU data
+  bool status = pb_encode(&stream, AccGyro_fields, &accGyro);
+  // check the status
+  if (!status)
+  {
+    Serial.println("Failed to encode accGyro");
+    return;
+  }
+  messageLength = stream.bytes_written;
+
+  stream = pb_ostream_from_buffer(bufferWrapper, sizeof(bufferWrapper));
+
+  // wrapper
+  Wrapper wrap = Wrapper_init_zero;
+  wrap.type = Wrapper_DataType_ACCGYRO;
+  wrap.data.funcs.encode = &ProtobufBridge::writeBuffer;
+
+  status = pb_encode(&stream, Wrapper_fields, &wrap);
+
+  if (!status)
+  {
+    Serial.println("Failed to encode wrapper");
+    return;
+  }
+
+  wrapMessageLength = stream.bytes_written;
+  //sendPacket();
+  sendPacketBundle();
 }
 
 
@@ -380,4 +415,32 @@ void ProtobufBridge::sendPacket() {
   udp->beginPacket(serverip, serverport);
   udp->write(bufferWrapper, wrapMessageLength);
   udp->endPacket();
+}
+
+void ProtobufBridge::sendPacketBundle() {
+  
+  if (bundleIndex + wrapMessageLength > 1024) {
+    
+    // Serial.println("New Buf: ");
+    // char dataString[2] = {0};
+    // for (size_t i = 0; i < bundleIndex; i++)
+    // {
+    //   sprintf(dataString,"%02X",udpBundle[i]);
+    //   Serial.print(dataString);
+    // }
+    // Serial.println("");
+    udp->beginPacket(serverip, serverportBundle);
+    udp->write(udpBundle, bundleIndex);
+    udp->endPacket();
+    bundleIndex = 0;
+  }
+
+
+
+  // add to bundle message
+  udpBundle[bundleIndex] =  (uint8_t) wrapMessageLength;
+  memcpy(udpBundle+bundleIndex+1, bufferWrapper, wrapMessageLength);
+  bundleIndex += wrapMessageLength + 1;
+
+  
 }

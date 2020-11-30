@@ -22,12 +22,15 @@ class ImuSensor
 
   private:
     ProtobufBridge protobridge;
-    Imu prepareData(int64_t time);
+    AccGyro prepareData(int64_t time);
     Adafruit_BNO055 bno = Adafruit_BNO055{-1, 0x28};
     void displaySensorDetails();
     void displaySensorStatus();
     void displayCalStatus();
     Timer statusTimer{1000};
+    int64_t timeCount;
+    float lastX;
+
 
 };
 #endif

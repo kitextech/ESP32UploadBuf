@@ -15,13 +15,17 @@ public:
   WiFiUDP *udp; // needs to be set before use
   IPAddress serverip; // needs to be set before use
   unsigned int serverport; // needs to be set before use
+  unsigned int serverportBundle = 10104; // UDP bundle messages up to 10x 
   static uint8_t buffer[128];
   static size_t messageLength;
   size_t wrapMessageLength;
-  uint8_t bufferWrapper[512];
+  uint8_t bufferWrapper[128];
+  uint8_t udpBundle[1024];
+  int bundleIndex;
 
   // functions
   void sendIMU(Imu imu);
+  void sendAccGyro(AccGyro accGyro);
   void sendWind(Wind wind);
   void sendSpeed(Speed speed);
   void sendTemperature(Temperature temperature);
@@ -36,6 +40,7 @@ public:
 
 private:
   void sendPacket();
+  void sendPacketBundle();
 };
 
 #endif

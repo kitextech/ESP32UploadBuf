@@ -34,51 +34,60 @@ void ImuSensor::setup(ProtobufBridge bridge)
 void ImuSensor::loopWifiAndTime(int64_t time){
   if( uploadTimer.doRun() ) {
     // Serial.println("it's time");
-    protobridge.sendIMU(prepareData(time));
+    protobridge.sendAccGyro(prepareData(time));
   }
 }
 
 
-Imu ImuSensor::prepareData(int64_t time)
+AccGyro ImuSensor::prepareData(int64_t time)
 {
-  Imu imuData = Imu_init_zero;
-  imuData.time = time;
+  AccGyro accGyroData = AccGyro_init_zero;
+  accGyroData.time = (uint64_t) time; //220; //
+  timeCount +=1; 
 
   imu::Vector<3> acc = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER); // when in nonfsion mode!
   // imu::Vector<3> acc = bno.getVector(Adafruit_BNO055::VECTOR_LINEARACCEL);
   imu::Vector<3> gyro = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
-  imu::Quaternion quat = bno.getQuat();
+  // imu::Quaternion quat = bno.getQuat();
 
-  imuData.has_acc = true;
-  imuData.acc.x = acc.x();
-  imuData.acc.y = acc.y();
-  imuData.acc.z = acc.z();
+  accGyroData.has_acc = true;
+  accGyroData.acc.x = 1;//acc.x();
+  accGyroData.acc.y = 2;//acc.y();
+  accGyroData.acc.z = 3;//acc.z();
 
-  imuData.has_gyro = true;
-  imuData.gyro.x = gyro[0];
-  imuData.gyro.y = gyro.y();
-  imuData.gyro.z = gyro.z();
+  accGyroData.has_gyro = true;
 
-  imuData.has_orientation = true; // when in nonfsion mode!
-  imuData.orientation.x = quat.x();
-  imuData.orientation.y = quat.y();
-  imuData.orientation.z = quat.z();
-  imuData.orientation.w = quat.w();
+  accGyroData.gyro.x = gyro.x(); // timeCount%2 ? xx : xxx; //(float) gyro.x();
+  accGyroData.gyro.y = 0; //gyro.y();
+  accGyroData.gyro.z = timeCount;
+
+  // if (!(accGyroData.gyro.x < 10 && -10 < accGyroData.gyro.x)) {
+  //   Serial.println(accGyroData.gyro.x);
+  // } 
+  Serial.print(accGyroData.gyro.x);
+  Serial.print(accGyroData.gyro.y);
+  Serial.println(accGyroData.gyro.z);
+
+  // imuData.has_orientation = true; // when in nonfsion mode!
+  // imuData.orientation.x = 0;//quat.x();
+  // imuData.orientation.y = 0;//quat.y();
+  // imuData.orientation.z = 0;//quat.z();
+  // imuData.orientation.w = 0;//quat.w();
 
   
 
-  if (statusTimer.doRun()) {
-  //   displaySensorDetails();
-  //   displaySensorStatus();
-  //   displayCalStatus();
-    float voltage =  ((float) analogRead(A13)) / 4096.0 * 3.3 * 2; // appximate Voltage
-    Serial.println(voltage); 
-    if (voltage < (3.5)) {
-      digitalWrite(REDLED, !digitalRead(REDLED));
-    }
-  }
+  // if (statusTimer.doRun()) {
+  // //   displaySensorDetails();
+  // //   displaySensorStatus();
+  // //   displayCalStatus();
+  //   float voltage =  ((float) analogRead(A13)) / 4096.0 * 3.3 * 2; // appximate Voltage
+  //   Serial.println(voltage); 
+  //   if (voltage < (3.5)) {
+  //     digitalWrite(REDLED, !digitalRead(REDLED));
+  //   }
+  // }
   
-  return imuData;
+  return accGyroData;
 }
 
 /**************************************************************************/
