@@ -66,8 +66,43 @@ void ProtobufBridge::sendAccGyro(AccGyro accGyro)
   }
   messageLength = stream.bytes_written;
 
-  stream = pb_ostream_from_buffer(bufferWrapper, sizeof(bufferWrapper));
 
+  AccGyro messageCheck = AccGyro_init_zero;
+
+  pb_istream_t streamCheck = pb_istream_from_buffer(buffer, messageLength);
+  status = pb_decode(&streamCheck, AccGyro_fields, &messageCheck);
+    // check the status
+  if (!status)
+  {
+    Serial.printf("Decoding failed: %s\n", PB_GET_ERROR(&streamCheck));
+    for (size_t i = 0; i < messageLength; i++)
+    {
+      Serial.println("Buffer: ");
+      char dataString[2] = {0};
+      for (size_t i = 0; i < messageLength; i++)
+      {
+        sprintf(dataString,"%02X",bufferWrapper[i]);
+        Serial.print(dataString);
+      }
+      Serial.println("");
+    }
+    
+  }
+
+  if (accGyro.gyro.x != messageCheck.gyro.x || accGyro.gyro.y != messageCheck.gyro.y || accGyro.gyro.z != messageCheck.gyro.z)
+  {
+    Serial.println("Encoding and decoding changed the content!");
+    Serial.println(accGyro.gyro.x);
+    Serial.println(messageCheck.gyro.x);
+    Serial.println(accGyro.gyro.y);
+    Serial.println(messageCheck.gyro.y);
+    Serial.println(accGyro.gyro.z);
+    Serial.println(messageCheck.gyro.z);
+    delay(500);
+    return;
+  }
+
+  stream = pb_ostream_from_buffer(bufferWrapper, sizeof(bufferWrapper));
   // wrapper
   Wrapper wrap = Wrapper_init_zero;
   wrap.type = Wrapper_DataType_ACCGYRO;
@@ -282,7 +317,7 @@ void ProtobufBridge::sendForce(Force force)
   }
 
   wrapMessageLength = stream.bytes_written;
-
+  sendPacketBundle();
   // Serial.print("Message Length wrapper: ");
   // Serial.println(stream.bytes_written);
 }

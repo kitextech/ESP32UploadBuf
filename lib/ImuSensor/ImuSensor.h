@@ -15,7 +15,7 @@ class ImuSensor
     void setup(ProtobufBridge bridge);
 
     
-    Timer uploadTimer{10};
+    Timer uploadTimer{20};
     void loop();
     void loopWifiAndTime(int64_t time);
 

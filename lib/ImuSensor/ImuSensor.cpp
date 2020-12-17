@@ -51,22 +51,22 @@ AccGyro ImuSensor::prepareData(int64_t time)
   // imu::Quaternion quat = bno.getQuat();
 
   accGyroData.has_acc = true;
-  accGyroData.acc.x = 1;//acc.x();
-  accGyroData.acc.y = 2;//acc.y();
-  accGyroData.acc.z = 3;//acc.z();
+  accGyroData.acc.x = acc.x();
+  accGyroData.acc.y = acc.y();
+  accGyroData.acc.z = acc.z();
 
   accGyroData.has_gyro = true;
 
   accGyroData.gyro.x = gyro.x(); // timeCount%2 ? xx : xxx; //(float) gyro.x();
-  accGyroData.gyro.y = 0; //gyro.y();
-  accGyroData.gyro.z = timeCount;
+  accGyroData.gyro.y = gyro.y();
+  accGyroData.gyro.z = gyro.z(); //timeCount;
 
   // if (!(accGyroData.gyro.x < 10 && -10 < accGyroData.gyro.x)) {
   //   Serial.println(accGyroData.gyro.x);
   // } 
-  Serial.print(accGyroData.gyro.x);
-  Serial.print(accGyroData.gyro.y);
-  Serial.println(accGyroData.gyro.z);
+  // Serial.print(accGyroData.gyro.x);
+  // Serial.print(accGyroData.gyro.y);
+  // Serial.println(accGyroData.gyro.z);
 
   // imuData.has_orientation = true; // when in nonfsion mode!
   // imuData.orientation.x = 0;//quat.x();

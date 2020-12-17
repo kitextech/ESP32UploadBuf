@@ -163,7 +163,7 @@ void setup()
   for (int i = 0; i < (sizeof(forceSensors) / sizeof(*forceSensors)); i++)
   {
     Serial.println(i);
-    forceSensors[i].setup();
+    forceSensors[i].setup(protobufBridge);
   }
 #endif
 
@@ -368,10 +368,9 @@ void wifiAndTimeLoop() {
 
 #if FORCE
     for (int i = 0; i < (sizeof(forceSensors) / sizeof(*forceSensors)); i++)
-    {
-      // Serial.println(i);
-      doAtFrequency(sendForce, forceSensors[i].t0, forceSensors[i].uploadFrequency, i);
-    }
+  {
+    forceSensors[i].loopWifiAndTime(newLocalTime()); 
+  }
 #endif
 
 #if OLED
