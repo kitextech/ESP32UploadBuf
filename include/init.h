@@ -19,7 +19,7 @@ using namespace std;
 #define LED_PIN 0
 
 // Sensor and vesc include statements
-#define IMU 1
+#define IMU 0
 #define ACC 0
 #define WIND 0
 #define POWER 0
@@ -30,6 +30,7 @@ using namespace std;
 #define OLED 0
 #define VESC 0
 #define BLADE 0
+#define HUMTEMP 1
 
 #if IMU
 #include <ImuSensor.h>
@@ -37,7 +38,7 @@ ImuSensor imuSensor;
 #endif
 #if ACC
 #include <AccSensor.h>
-AccSensor accSensor(200); // update delay
+AccSensor accSensor(20); // update delay
 #endif
 #if WIND
 #include <WindSensor.h>
@@ -64,9 +65,9 @@ TemperatureSensor temperatureSensor(1, A0, 10000, 25, 3950, 10000);
 #if FORCE
 #include <ForceSensor.h>
 ForceSensor forceSensors[] = {
-    ForceSensor(1, A1, A0, -9.479e-005, -0.3162, 40),
-    ForceSensor(2, A11, A12, -9.462e-005, 1.444, 40),
-    ForceSensor(3, A9, A10, -9.332e-005, -0.7352, 40)};
+    ForceSensor(1, A1, A0, -9.479e-005, -0.3162),
+    ForceSensor(2, A11, A12, -9.462e-005, 1.444),
+    ForceSensor(3, A9, A10, -9.332e-005, -0.7352)};
 #endif
 #if OLED
 #include <Oled.h>
@@ -87,16 +88,21 @@ int servo2Pin = 15;
 int servo3Pin = 32;
 BladePitchControl bladePitchControl(servo1Pin, servo2Pin, servo3Pin, 5);
 #endif
+#if HUMTEMP
+#include <AHT20Humidity.h>
+AHT20Humidity ahtSensor; // update delay
+#endif
+
 
 // WiFi
 const char *password = "morepower";
 
-// const char *ssid = "kitex"; // "kitex"; // use kitexField
-// const char *addr = "192.168.8.152"; // Andreas' laptop on kitex
-const char *ssid = "kitexField"; // "kitex"; // use kitexField
+const char *ssid = "kitex"; // "kitex"; // use kitexField
+const char *addr = "192.168.8.152"; // Andreas' laptop on kitex
+// const char *ssid = "kitexField"; // "kitex"; // use kitexField
 // const char *ssid = "KiteX Workshop"; // "kitex"; // use kitexField
 // const char *addr = "192.168.8.126"; // Pi' on kitexField
-const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
+// const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
 // const char *hostname = "powerbox";
 // const char *hostname = "motor1";
 // const char *hostname = "bluemotor";
@@ -104,8 +110,8 @@ const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
 
 // const char *hostname = "passiveKiteMotor";
 // const char *hostname = "motor1";
-const char *hostname = "imu1";
-
+// const char *hostname = "control1";
+const char *hostname = "humidityTemperature1";
 
 
 

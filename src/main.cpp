@@ -156,6 +156,9 @@ void setup()
 #if ACC
   accSensor.setup();
 #endif
+#if HUMTEMP
+  ahtSensor.setup(protobufBridge);
+#endif
 #if RPM_HALL
   hallSensor.setup();
 #endif
@@ -348,6 +351,10 @@ void wifiAndTimeLoop() {
       udp.endPacket();
   }
 
+#endif
+
+#if HUMTEMP 
+  ahtSensor.loopWifiAndTime(newLocalTime());
 #endif
 
 #if POWER && !POWER_DUMP

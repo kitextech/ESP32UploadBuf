@@ -446,6 +446,48 @@ void ProtobufBridge::sendSetpoint(Setpoint setpoint)
   // Serial.println(stream.bytes_written);
 }
 
+
+void ProtobufBridge::sendHumidityTemperature(HumidityTemperature humTemp)
+{
+  // create stream from the buffer
+  pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
+
+  // write HumTemp data
+  bool status = pb_encode(&stream, HumidityTemperature_fields, &humTemp);
+  // check the status
+  if (!status)
+  {
+    Serial.println("Failed to encode humtemp");
+    return;
+  }
+  // Serial.print("Message Length imu: ");
+  // Serial.println(stream.bytes_written);
+  messageLength = stream.bytes_written;
+
+  stream = pb_ostream_from_buffer(bufferWrapper, sizeof(bufferWrapper));
+
+  // wrapper
+  Wrapper wrap = Wrapper_init_zero;
+  wrap.type = Wrapper_DataType_HUMIDITYTEMP;
+  wrap.data.funcs.encode = &ProtobufBridge::writeBuffer;
+
+  status = pb_encode(&stream, Wrapper_fields, &wrap);
+
+  if (!status)
+  {
+    Serial.println("Failed to encode wrapper");
+    return;
+  }
+
+  wrapMessageLength = stream.bytes_written;
+  sendPacket();
+
+  // Serial.print("Message Length wrapper: ");
+  // Serial.println(stream.bytes_written);
+}
+
+
+
 void ProtobufBridge::sendPacket() {
   udp->beginPacket(serverip, serverport);
   udp->write(bufferWrapper, wrapMessageLength);
@@ -479,3 +521,6 @@ void ProtobufBridge::sendPacketBundle() {
 
   
 }
+
+
+

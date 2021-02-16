@@ -33,6 +33,7 @@ public:
   void sendPower(Power power);
   void sendForce(Force force);
   void sendBladeControl(BladeControl bladeControl);
+  void sendHumidityTemperature(HumidityTemperature humtemp);
 
   void sendVesc(Vesc vesc);
   void sendSetpoint(Setpoint setpoint);
