@@ -27,7 +27,8 @@ typedef enum _Wrapper_DataType {
     Wrapper_DataType_TURBINECONTROL = 9,
     Wrapper_DataType_ACC = 10,
     Wrapper_DataType_ACCGYRO = 11,
-    Wrapper_DataType_HUMIDITYTEMP = 12
+    Wrapper_DataType_HUMIDITYTEMP = 12,
+    Wrapper_DataType_WINDDIR = 13
 } Wrapper_DataType;
 
 typedef enum _Setpoint_Origin {
@@ -125,6 +126,11 @@ typedef struct _Wind {
     float direction;
 } Wind;
 
+typedef struct _WindDirection {
+    int64_t time;
+    float direction;
+} WindDirection;
+
 typedef struct _Wrapper {
     Wrapper_DataType type;
     pb_callback_t data;
@@ -157,8 +163,8 @@ typedef struct _Imu {
 
 /* Helper constants for enums */
 #define _Wrapper_DataType_MIN Wrapper_DataType_SPEED
-#define _Wrapper_DataType_MAX Wrapper_DataType_HUMIDITYTEMP
-#define _Wrapper_DataType_ARRAYSIZE ((Wrapper_DataType)(Wrapper_DataType_HUMIDITYTEMP+1))
+#define _Wrapper_DataType_MAX Wrapper_DataType_WINDDIR
+#define _Wrapper_DataType_ARRAYSIZE ((Wrapper_DataType)(Wrapper_DataType_WINDDIR+1))
 
 #define _Setpoint_Origin_MIN Setpoint_Origin_WEB
 #define _Setpoint_Origin_MAX Setpoint_Origin_ESP
@@ -186,6 +192,7 @@ typedef struct _Imu {
 #define Setpoint_init_default                    {0, 0, 0, _Setpoint_Origin_MIN}
 #define BladeControl_init_default                {0, 0, 0, 0, 0}
 #define TurbineControl_init_default              {0, 0, _TurbineControl_Command_MIN}
+#define WindDirection_init_default               {0, 0}
 #define Wrapper_init_zero                        {_Wrapper_DataType_MIN, {{NULL}, NULL}}
 #define Speed_init_zero                          {0, 0}
 #define Force_init_zero                          {0, 0, 0}
@@ -202,6 +209,7 @@ typedef struct _Imu {
 #define Setpoint_init_zero                       {0, 0, 0, _Setpoint_Origin_MIN}
 #define BladeControl_init_zero                   {0, 0, 0, 0, 0}
 #define TurbineControl_init_zero                 {0, 0, _TurbineControl_Command_MIN}
+#define WindDirection_init_zero                  {0, 0}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define BladeControl_time_tag                    1
@@ -249,6 +257,8 @@ typedef struct _Imu {
 #define Wind_time_tag                            1
 #define Wind_speed_tag                           2
 #define Wind_direction_tag                       3
+#define WindDirection_time_tag                   1
+#define WindDirection_direction_tag              2
 #define Wrapper_type_tag                         1
 #define Wrapper_data_tag                         2
 #define Acc_time_tag                             1
@@ -388,6 +398,12 @@ X(a, STATIC,   SINGULAR, UENUM,    command,           3)
 #define TurbineControl_CALLBACK NULL
 #define TurbineControl_DEFAULT NULL
 
+#define WindDirection_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, INT64,    time,              1) \
+X(a, STATIC,   SINGULAR, FLOAT,    direction,         2)
+#define WindDirection_CALLBACK NULL
+#define WindDirection_DEFAULT NULL
+
 extern const pb_msgdesc_t Wrapper_msg;
 extern const pb_msgdesc_t Speed_msg;
 extern const pb_msgdesc_t Force_msg;
@@ -404,6 +420,7 @@ extern const pb_msgdesc_t Vesc_msg;
 extern const pb_msgdesc_t Setpoint_msg;
 extern const pb_msgdesc_t BladeControl_msg;
 extern const pb_msgdesc_t TurbineControl_msg;
+extern const pb_msgdesc_t WindDirection_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define Wrapper_fields &Wrapper_msg
@@ -422,6 +439,7 @@ extern const pb_msgdesc_t TurbineControl_msg;
 #define Setpoint_fields &Setpoint_msg
 #define BladeControl_fields &BladeControl_msg
 #define TurbineControl_fields &TurbineControl_msg
+#define WindDirection_fields &WindDirection_msg
 
 /* Maximum encoded size of messages (where known) */
 /* Wrapper_size depends on runtime parameters */
@@ -440,6 +458,7 @@ extern const pb_msgdesc_t TurbineControl_msg;
 #define Setpoint_size                            23
 #define BladeControl_size                        31
 #define TurbineControl_size                      18
+#define WindDirection_size                       16
 
 #ifdef __cplusplus
 } /* extern "C" */

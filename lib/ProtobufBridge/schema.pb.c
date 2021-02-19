@@ -54,6 +54,9 @@ PB_BIND(BladeControl, BladeControl, AUTO)
 PB_BIND(TurbineControl, TurbineControl, AUTO)
 
 
+PB_BIND(WindDirection, WindDirection, AUTO)
+
+
 
 
 

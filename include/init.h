@@ -30,7 +30,8 @@ using namespace std;
 #define OLED 0
 #define VESC 0
 #define BLADE 0
-#define HUMTEMP 1
+#define HUMTEMP 0
+#define WINDDIRECTION 1
 
 #if IMU
 #include <ImuSensor.h>
@@ -92,7 +93,10 @@ BladePitchControl bladePitchControl(servo1Pin, servo2Pin, servo3Pin, 5);
 #include <AHT20Humidity.h>
 AHT20Humidity ahtSensor; // update delay
 #endif
-
+#if WINDDIRECTION
+#include <AS5048ARotary.h>
+AS5048ARotary rotarySensor; // update delay
+#endif
 
 // WiFi
 const char *password = "morepower";
@@ -111,7 +115,9 @@ const char *addr = "192.168.8.152"; // Andreas' laptop on kitex
 // const char *hostname = "passiveKiteMotor";
 // const char *hostname = "motor1";
 // const char *hostname = "control1";
-const char *hostname = "humidityTemperature1";
+// const char *hostname = "humidityTemperature1";
+const char *hostname = "windDirection1";
+
 
 
 

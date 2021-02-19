@@ -159,6 +159,9 @@ void setup()
 #if HUMTEMP
   ahtSensor.setup(protobufBridge);
 #endif
+#if WINDDIRECTION
+  rotarySensor.setup(protobufBridge); // update delay
+#endif
 #if RPM_HALL
   hallSensor.setup();
 #endif
@@ -355,6 +358,10 @@ void wifiAndTimeLoop() {
 
 #if HUMTEMP 
   ahtSensor.loopWifiAndTime(newLocalTime());
+#endif
+
+#if WINDDIRECTION
+  rotarySensor.loopWifiAndTime(newLocalTime()); // update delay
 #endif
 
 #if POWER && !POWER_DUMP
