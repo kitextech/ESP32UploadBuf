@@ -101,11 +101,11 @@ AS5048ARotary rotarySensor; // update delay
 // WiFi
 const char *password = "morepower";
 
-const char *ssid = "kitex"; // "kitex"; // use kitexField
-const char *addr = "192.168.8.152"; // Andreas' laptop on kitex
-// const char *ssid = "kitexField"; // "kitex"; // use kitexField
+// const char *ssid = "kitex"; // "kitex"; // use kitexField
+// const char *addr = "192.168.8.152"; // Andreas' laptop on kitex
+const char *ssid = "kitexField"; // "kitex"; // use kitexField
 // const char *ssid = "KiteX Workshop"; // "kitex"; // use kitexField
-// const char *addr = "192.168.8.126"; // Pi' on kitexField
+const char *addr = "192.168.8.126"; // Pi' on kitexField
 // const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
 // const char *hostname = "powerbox";
 // const char *hostname = "motor1";

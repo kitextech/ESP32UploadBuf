@@ -25,7 +25,15 @@ WindDirection AS5048ARotary::prepareData(int64_t time)
   
   float val = angleSensor.getRotationInDegrees();
 	// Serial.print("\nGot rotation of: ");
-	Serial.println(val);
+
+  float offset = 124.10;
+  val -= offset;
+  if (val < 0) {
+    val += 360;
+  }
+
+	// Serial.println(val);
+
 	// Serial.print("State: ");
 	// angleSensor.printState();
 	// Serial.print("Errors: ");

@@ -446,6 +446,10 @@ void noWifiAndTimeLoop() {
   windSensor.loop();
 #endif
 
+#if WINDDIRECTION
+  rotarySensor.loopWifiAndTime(0); // HACK
+#endif
+  delay(10);
 }
 
 //**********************************
