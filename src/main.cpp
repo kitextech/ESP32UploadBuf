@@ -7,6 +7,40 @@ int64_t newLocalTime()
   return (int64_t)tv_now.tv_sec * 1000000L + (int64_t)tv_now.tv_usec;
 }
 
+void printLocalTime(){
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  Serial.print("Day of week: ");
+  Serial.println(&timeinfo, "%A");
+  Serial.print("Month: ");
+  Serial.println(&timeinfo, "%B");
+  Serial.print("Day of Month: ");
+  Serial.println(&timeinfo, "%d");
+  Serial.print("Year: ");
+  Serial.println(&timeinfo, "%Y");
+  Serial.print("Hour: ");
+  Serial.println(&timeinfo, "%H");
+  Serial.print("Hour (12 hour format): ");
+  Serial.println(&timeinfo, "%I");
+  Serial.print("Minute: ");
+  Serial.println(&timeinfo, "%M");
+  Serial.print("Second: ");
+  Serial.println(&timeinfo, "%S");
+
+  Serial.println("Time variables");
+  char timeHour[3];
+  strftime(timeHour,3, "%H", &timeinfo);
+  Serial.println(timeHour);
+  char timeWeekDay[10];
+  strftime(timeWeekDay,10, "%A", &timeinfo);
+  Serial.println(timeWeekDay);
+  Serial.println();
+}
+
 enum pleaseDo
 {
   sendRpmHall,
@@ -132,7 +166,10 @@ void setup()
   protobufBridge.serverip = insertServerIP;
   protobufBridge.serverport = udpPortRemoteInsert;
   // Setup time sync with server att address
-  configTzTime("0", addr); // https://github.com/espressif/arduino-esp32/issues/1114 & https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/system_time.html
+  // configTzTime("0", "0.dk.pool.ntp.org", addr , "1.dk.pool.ntp.org"); // https://github.com/espressif/arduino-esp32/issues/1114 & https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/system_time.html
+  // configTzTime("0", addr, "0.dk.pool.ntp.org", "1.dk.pool.ntp.org"); // https://github.com/espressif/arduino-esp32/issues/1114 & https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/system_time.html
+  configTime(0, 0, NTPServer); // equivalent to using configTzTime. Using backup NTP servers doesn't seem effective. One can manually change them with success. 
+
 
 #if VESC
   vescControl.setup(protobufBridge);
@@ -294,6 +331,11 @@ boolean checkWifi(bool reportStatus) {
     }
     return false;
   }
+  if (reportStatus) {
+      Serial.print("Connected to WIFI: ");
+      Serial.println(ssid);
+  }
+
   return true;
 }
 
@@ -302,15 +344,18 @@ boolean checkWifi(bool reportStatus) {
 //**********************************
 
 boolean checkTime(bool reportStatus) {
-  
   if (newLocalTime() < 1e6 * 60 * 24 * 365)
   { 
     if (reportStatus) {
       Serial.print("Get time from ");
-      Serial.print(addr);
+      Serial.print(NTPServer);
       Serial.println(" ...");
     }
     return false;
+  }
+
+  if (reportStatus) {
+      Serial.println("Got time");
   }
   return true;
 }
@@ -446,9 +491,22 @@ void noWifiAndTimeLoop() {
   windSensor.loop();
 #endif
 
-#if WINDDIRECTION
-  rotarySensor.loopWifiAndTime(0); // HACK
+// #if WINDDIRECTION
+//   rotarySensor.loopWifiAndTime(0); // HACK
+// #endif
+
+#if TEST
+
+  if (timer.doRun()) {
+    // if (!checkTime(false) && millis() > 20e3) {
+    //   configTime(0, 0, NTPServer);
+    //   Serial.println("Changed to fallback timeserver");
+    // }
+    printLocalTime();
+  }
+
 #endif
+
   delay(10);
 }
 
@@ -457,12 +515,10 @@ void noWifiAndTimeLoop() {
 //**********************************
 void loop()
 { 
-  
-  if ( checkWifi( wifiTimeReport.doRun() ) ) {
+  if ( checkWifi( wifiReconnect.doRun() ) ) {
     wifiLoop();
 
     if (checkTime( wifiTimeReport.doRun()  )) {
-      
       
       wifiAndTimeLoop();
     }
