@@ -31,7 +31,9 @@ using namespace std;
 #define VESC 0
 #define BLADE 0
 #define HUMTEMP 0
-#define WINDDIRECTION 1
+#define WINDDIRECTION 0
+#define TEST 1
+#define LAPTOP 1
 
 #if IMU
 #include <ImuSensor.h>
@@ -77,10 +79,15 @@ Oled oled(5);
 #if VESC
 #include <VescControl.h>
 VescControl vescControl(false, false); // dumping, rc_overwrite
+const char *hostname = "motor1";
+// const char *hostname = "bluemotor";
+// const char *hostname = "motor2";
+// const char *hostname = "passiveKiteMotor";
+// const char *hostname = "motor1";
 #endif
 
 #if BLADE
-
+const char *hostname = "control1";
 #include <BladePitchControl.h>
 // These are all GPIO pins on the ESP32
 // Recommended pins include 2,4,12-19,21-23,25-27,32-33
@@ -92,31 +99,31 @@ BladePitchControl bladePitchControl(servo1Pin, servo2Pin, servo3Pin, 5);
 #if HUMTEMP
 #include <AHT20Humidity.h>
 AHT20Humidity ahtSensor; // update delay
+const char *hostname = "humidityTemperature1";
 #endif
 #if WINDDIRECTION
 #include <AS5048ARotary.h>
 AS5048ARotary rotarySensor; // update delay
+const char *hostname = "windDirection1";
+#endif
+
+#if TEST
+  Timer timer{1000};
+  const char *hostname = "test1";
 #endif
 
 // WiFi
 const char *password = "morepower";
 
-// const char *ssid = "kitex"; // "kitex"; // use kitexField
-// const char *addr = "192.168.8.152"; // Andreas' laptop on kitex
+#if LAPTOP
+const char *NTPServer = "0.dk.pool.ntp.org";
+const char *ssid = "kitex"; // "kitex"; // use kitexField
+const char *addr = "192.168.8.152"; // Andreas' laptop on kitex
+#else
 const char *ssid = "kitexField"; // "kitex"; // use kitexField
-// const char *ssid = "KiteX Workshop"; // "kitex"; // use kitexField
-const char *addr = "192.168.8.126"; // Pi' on kitexField
-// const char *addr = "192.168.8.126"; // Andreas' laptop on kitexField
-// const char *hostname = "powerbox";
-// const char *hostname = "motor1";
-// const char *hostname = "bluemotor";
-// const char *hostname = "motor2";
-
-// const char *hostname = "passiveKiteMotor";
-// const char *hostname = "motor1";
-// const char *hostname = "control1";
-// const char *hostname = "humidityTemperature1";
-const char *hostname = "windDirection1";
+const char *addr = "192.168.8.126"; // Pi
+const char *NTPServer = addr;
+#endif
 
 
 
@@ -133,8 +140,8 @@ uint8_t UDPInBuffer[128];
 
 
 // Timer for reporting wifi and time status
-Timer wifiTimeReport{10000}; // 10000 ms period
-Timer wifiReconnect{10000}; // 10000 ms period
+Timer wifiTimeReport{1000}; // 10000 ms period
+Timer wifiReconnect{1000}; // 10000 ms period
 
 int wifiReconnectCount;
 
