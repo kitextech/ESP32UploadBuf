@@ -404,6 +404,7 @@ void ProtobufBridge::sendBladeControl(BladeControl bladeControl)
 
   // Serial.print("Message Length wrapper: ");
   // Serial.println(stream.bytes_written);
+  sendPacketBundle();
 }
 
 

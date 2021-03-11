@@ -1,15 +1,12 @@
 #include "BladePitchControl.h"
 
 // constructor
-BladePitchControl::BladePitchControl(int _pin1, int _pin2, int _pin3, uint16_t _uploadFrequency)
+BladePitchControl::BladePitchControl(int _pin1, int _pin2, int _pin3)
 {
-  Serial.println("Created a Pitch Controller");
+  Serial.println("Created a pitch controller");
   pin1 = _pin1;
   pin2 = _pin2;
   pin3 = _pin3;
-  
-  uploadFrequency = _uploadFrequency;
-  t0 = millis();
 }
 
 BladeControl BladePitchControl::prepareData(int64_t time)
@@ -25,8 +22,10 @@ BladeControl BladePitchControl::prepareData(int64_t time)
   return data;
 }
 
-void BladePitchControl::setup()
+void BladePitchControl::setup(ProtobufBridge bridge)
 { 
+  protobridge = bridge;
+
   int minUs = 800;
   int maxUs = 2200;
   Serial.println("Blade Setup");
@@ -41,6 +40,14 @@ void BladePitchControl::setup()
 	servo2.attach(pin2, minUs, maxUs);
 	servo3.attach(pin3, minUs, maxUs);
 }
+
+void BladePitchControl::loopWifiAndTime(int64_t time) {
+    if( uploadTimer.doRun() ) {
+    // prepareData(time);
+    protobridge.sendBladeControl(prepareData(time));
+  }
+}
+
 
 // Limites the input. in Blade for the servos
 float BladePitchControl::limit(float value, float min, float max) {

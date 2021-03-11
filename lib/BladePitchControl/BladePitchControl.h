@@ -9,25 +9,24 @@
 #include "./pb_decode.h"
 // create four servo objects 
 #include <WiFi.h>
+#include <Timer.h>
+#include <ProtobufBridge.h>
 
 
 class BladePitchControl
 {
 public:
-  BladePitchControl(int pin1, int pin2, int pin3, uint16_t uploadFrequency);
+  BladePitchControl(int pin1, int pin2, int pin3);
 
-  BladeControl prepareData(int64_t time);
-
-  void setup();
+  Timer uploadTimer{100};
+  void setup(ProtobufBridge bridge);
   void loop(uint8_t UDPInBuffer[], int n);
-
-
-  int t0;
-  uint16_t uploadFrequency;
+  void loopWifiAndTime(int64_t time);
 
 private:
   float limit(float val, float min, float max);
-
+  ProtobufBridge protobridge;
+  BladeControl prepareData(int64_t time);
   int pin1;
   int pin2;
   int pin3;

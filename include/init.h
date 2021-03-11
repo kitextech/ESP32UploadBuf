@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <iostream>
 #include <WiFi.h>
-#include <time.h>
+// #include <time.h>
 
 #include <stdio.h>
 #include "./pb_encode.h"
@@ -11,7 +11,7 @@
 
 #include <ESPmDNS.h>
 #include <WiFiUdp.h>
-#include <ArduinoOTA.h>
+#include <Util.h>
 #include <ProtobufBridge.h>
 
 using namespace std;
@@ -94,7 +94,7 @@ const char *hostname = "control1";
 int servo1Pin = 33;
 int servo2Pin = 15;
 int servo3Pin = 32;
-BladePitchControl bladePitchControl(servo1Pin, servo2Pin, servo3Pin, 5);
+BladePitchControl bladePitchControl(servo1Pin, servo2Pin, servo3Pin);
 #endif
 #if HUMTEMP
 #include <AHT20Humidity.h>
@@ -138,12 +138,10 @@ ProtobufBridge protobufBridge; // not initialized correctly. Wait for setup!
 unsigned int udpPortLocalRecieve = 10102;
 uint8_t UDPInBuffer[128];
 
-
-// Timer for reporting wifi and time status
-Timer wifiTimeReport{1000}; // 10000 ms period
-Timer wifiReconnect{1000}; // 10000 ms period
-
-int wifiReconnectCount;
-
 // Ota 
 bool OTASetup = false;
+
+// WifiReconnect
+WifiReconnect wifiReconnect{};
+
+Timer timeReport{1000}; // 10000 ms period
