@@ -157,3 +157,26 @@ boolean WifiReconnect::checkWifi(const char *ssid) {
 
   return true;
 }
+
+
+
+//**********************************
+//************ Check Time ****************
+//**********************************
+
+bool checkTime(int64_t time, bool reportStatus, const char *NTPServer) {
+  if (time < 1e6 * 60 * 24 * 365)
+  { 
+    if (reportStatus) {
+      Serial.print("Get time from ");
+      Serial.print(NTPServer);
+      Serial.println(" ...");
+    }
+    return false;
+  }
+
+  if (reportStatus) {
+      Serial.println("Got time");
+  }
+  return true;
+}

@@ -21,8 +21,9 @@ private:
     void reconnectToWifi();
 
 };
+
+bool checkTime(int64_t time, bool reportStatus, const char *NTPServer);
 void printLocalTime();
 bool setupOTA(const char *hostname);
-
 
 #endif

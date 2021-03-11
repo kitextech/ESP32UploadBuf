@@ -84,27 +84,6 @@ void setup()
 #endif
 }
 
-//**********************************
-//************ Check Time ****************
-//**********************************
-
-boolean checkTime(bool reportStatus) {
-  if (newLocalTime() < 1e6 * 60 * 24 * 365)
-  { 
-    if (reportStatus) {
-      Serial.print("Get time from ");
-      Serial.print(NTPServer);
-      Serial.println(" ...");
-    }
-    return false;
-  }
-
-  if (reportStatus) {
-      Serial.println("Got time");
-  }
-  return true;
-}
-
 
 //**********************************
 //************ Wifi Loop ****************
@@ -217,7 +196,6 @@ void noWifiAndTimeLoop() {
 #if VESC
   vescControl.loop();
 #endif
-
 #if WIND
   windSensor.loop();
 #endif
@@ -227,7 +205,6 @@ void noWifiAndTimeLoop() {
 // #endif
 
 #if TEST
-
   if (timer.doRun()) {
     // if (!checkTime(false) && millis() > 20e3) {
     //   configTime(0, 0, NTPServer);
@@ -235,9 +212,7 @@ void noWifiAndTimeLoop() {
     // }
     //printLocalTime();
   }
-
 #endif
-
   delay(10);
 }
 
@@ -249,8 +224,7 @@ void loop()
   if ( wifiReconnect.checkWifi( ssid ) ) {
     wifiLoop();
 
-    if (checkTime( timeReport.doRun()  )) {
-      
+    if (checkTime( newLocalTime(), timeReport.doRun(), NTPServer)) {
       wifiAndTimeLoop();
     }
   }
